@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 import plotly.express as px
 import json
-import _help_export_to_file
+#import _help_export_to_file
 import plotly
 
 app = dash.Dash()
@@ -30,7 +30,7 @@ df = pd.concat([df_sub1, df_sub2], axis=1)
 pre_style = {"backgroundColor": "#ddd", "fontSize": 20, "padding": "10px", "margin": "10px"}
 hidden_style = {"display": "none"}
 
-#children's setting will be affected by parent's setting. display none can be declared only in here to hide the object
+# children's setting will be affected by parent's setting. display none can be declared only in here to hide the object
 # rather than going through all the children settings
 hidden_inputs = html.Div(id="hidden-inputs",  children=[]) #style={'display': 'none'},
 hidden_inputs_relay = html.Div(id="hidden_inputs_relay", children=[]) #, style={'display': 'none'}
@@ -82,14 +82,19 @@ dash_input_keys = sorted(list(graph_names))
 last_clicked_id = "last-clicked"
 last_clicked_id2  = "second-last-clicked"
 
-input_clicktime_trackers = [key + "_clicktime" for key in dash_input_keys]
+
 hidden_inputs.children.append(dcc.Input(id=last_clicked_id,  value = None ))#,value=None
 hidden_inputs.children.append(dcc.Input(id=last_clicked_id2, value = None ))
+
+#['bar_clicktime', 'baz_clicktime', 'foo_clicktime']
+input_clicktime_trackers = [key + "_clicktime" for key in dash_input_keys]
 
 for hidden_input_key in input_clicktime_trackers:
     hidden_inputs.children.append(dcc.Input(id=hidden_input_key,  value=None))
 
 ############# relay time handling / sync the area of zoom in for each graph ##### below
+# ['bar_relaytime', 'baz_relaytime', 'foo_relaytime']
+
 relaytime_tracker = [key2 + "_relaytime" for key2 in dash_input_keys]
 for relay_tracker_id in relaytime_tracker:
     hidden_inputs_relay.children.append(dcc.Input(id=relay_tracker_id, value = None ))#, style={'display':'none'}
