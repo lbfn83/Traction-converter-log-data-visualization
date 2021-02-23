@@ -12,8 +12,8 @@ import json
 import plotly
 
 app = dash.Dash()
-
-
+#suppress cicular execption
+app.config['suppress_callback_exceptions'] = True
 graph_names = ["foo", "bar", "baz"]
 
 
@@ -29,10 +29,7 @@ df_sub2 = pd.DataFrame({"Col " + str(i): np.arange(0,300) for i in (1, 3, 5) })
 df = pd.concat([df_sub1, df_sub2], axis=1)
 pre_style = {"backgroundColor": "#ddd", "fontSize": 20, "padding": "10px", "margin": "10px"}
 hidden_style = {"display": "none"}
-
-# children's setting will be affected by parent's setting. display none can be declared only in here to hide the object
-# rather than going through all the children settings
-hidden_inputs = html.Div(id="hidden-inputs",  children=[]) #style={'display': 'none'},
+hidden_inputs = html.Div(id="hidden-inputs", style={'display': 'none'}, children=[])
 hidden_inputs_relay = html.Div(id="hidden_inputs_relay", children=[]) #, style={'display': 'none'}
 
 
@@ -80,26 +77,19 @@ app.layout = html.Div(children=[
 #,figure =  fig1
 dash_input_keys = sorted(list(graph_names))
 last_clicked_id = "last-clicked"
-last_clicked_id2  = "second-last-clicked"
 
-
-hidden_inputs.children.append(dcc.Input(id=last_clicked_id,  value = None ))#,value=None
-hidden_inputs.children.append(dcc.Input(id=last_clicked_id2, value = None ))
-
-#['bar_clicktime', 'baz_clicktime', 'foo_clicktime']
 input_clicktime_trackers = [key + "_clicktime" for key in dash_input_keys]
+hidden_inputs.children.append(dcc.Input(id=last_clicked_id, style={'display':'none'}, value = None ))#,value=None
 
 for hidden_input_key in input_clicktime_trackers:
-    hidden_inputs.children.append(dcc.Input(id=hidden_input_key,  value=None))
+    hidden_inputs.children.append(dcc.Input(id=hidden_input_key, style={'display':'none'}, value=None))
 
 ############# relay time handling / sync the area of zoom in for each graph ##### below
-# ['bar_relaytime', 'baz_relaytime', 'foo_relaytime']
-
 relaytime_tracker = [key2 + "_relaytime" for key2 in dash_input_keys]
 for relay_tracker_id in relaytime_tracker:
     hidden_inputs_relay.children.append(dcc.Input(id=relay_tracker_id, value = None ))#, style={'display':'none'}
 
-hidden_inputs_relay.children.append(dcc.Input(id='last_zoomed_obj', value=None))#, style={'display':'none'}
+hidden_inputs_relay.children.append(dcc.Input(id='last_zoomed_obj', value=None))
 
 # three call back will be created
 for graph_name, relay_obj_name in zip(dash_input_keys, relaytime_tracker):
@@ -165,14 +155,21 @@ def latest_relay_obj_invoked_time_callback(*inputs_and_state):
 for graph_key, clicktime_out_key in zip(dash_input_keys, input_clicktime_trackers):
         @app.callback(Output(clicktime_out_key, 'value'),
                       [Input(graph_key, 'selectedData')],
-                      [State(graph_key, 'id')])
-        def update_clicktime(selectdata, graph_id):
+                      [State(graph_key, 'id'), State(clicktime_out_key, 'value')])
+        def update_clicktime(selectdata, graph_id, pre_value):
             print("selectedData: {}".format(selectdata))
 
-            # if clickdata is None:
-            #             #     clickdata = None
-            #11292020 selectedData에서 가장 최근에 선택된 단 한 개의 점 정보만
-            #relay 될 수 있도록 비교문을 만든다.
+
+            ## only a single selected point should be contained in each selectedData
+            #if len( selectedata) > 1 // which means more than two selected points info are contained and only one point is about the update and the rest is duplicate
+            # and then
+            if selectdata is not None:
+                if len(selectdata['points']) > 1 :
+                    loaded_pre_value = json.loads(pre_value)
+                    newElem_Update = [i for i in loaded_pre_value['select data']['points'] +selectdata['points'] if i not in loaded_pre_value['select data']['points'] or i not in selectdata['points'] ]
+                    selectdata['points'].clear()
+                    selectdata['points'] = newElem_Update
+
 
             result = {
                 "select time": datetime.datetime.now().timestamp(),
@@ -182,7 +179,7 @@ for graph_key, clicktime_out_key in zip(dash_input_keys, input_clicktime_tracker
             json_result = json.dumps(result)
             return json_result
 # one call back with multiple input will be created
-cb_output = [Output(last_clicked_id, 'value'), Output(last_clicked_id2, 'value')]
+cb_output = Output(last_clicked_id, 'value')
 cb_inputs = [Input(clicktime_out_key, 'value') for clicktime_out_key in input_clicktime_trackers]
 cb_current_state = State(last_clicked_id, 'value')
 # use the outputs generated in the callbacks above _instead_ of clickData
@@ -193,13 +190,11 @@ def last_clicked_callback(*inputs_and_state):
 
 
 
-
-
     last_state = [json.loads(inputs_and_state[-1]) if inputs_and_state[-1] is not None else inputs_and_state[-1] ]
 
 
 
-    print(last_state)
+    print("last_clicked callback : {}".format(last_state))
     if last_state[0] is None:
         last_state[0] = {
             "last_clicked": None,
@@ -213,7 +208,7 @@ def last_clicked_callback(*inputs_and_state):
         for raw_clicktime_input in clicktime_inputs:
             #####clicktime_input => json.dump로 인코딩 되어 있는 상태
             clicktime_input = json.loads(raw_clicktime_input)
-
+#int로 바꾸어 버리면... 시간 비교도 정확하지 않게 되자나 이거 float으로
             click_time = int(clicktime_input['select time'])
             if clicktime_input['select data'] and click_time > largest_clicktime:
                 largest_clicktime_input = clicktime_input
@@ -222,7 +217,7 @@ def last_clicked_callback(*inputs_and_state):
             last_state[0]['last_clicked'] = largest_clicktime_input['id']
             last_state[0]['last_clicked_data'] = largest_clicktime_input['select data']
 
-    return [json.dumps(last_state[0]), inputs_and_state[-1]]
+    return json.dumps(last_state[0])
 
 
 #################################
@@ -237,8 +232,6 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local, latest_re
     fig.update_layout(margin={'l': 20, 'r': 0, 'b': 15, 't': 5},clickmode = 'event+select')
 
 #latest_relay_val 의 timestamp를 봐줘야지.. 만일 none 이라고 하더라도.. last_zoom_obj에 값을 보낼 방도는 없을 듯...
-
-    # if (latest_relay_val is not None) and (latest_relay_val['zoom_size'] is not None):
     if (latest_relay_val is not None) and (latest_relay_val['zoom_size'] is not None):
         if 'xaxis.range[0]' in latest_relay_val['zoom_size']:
             fig.update_layout(xaxis = dict(range=[latest_relay_val['zoom_size']['xaxis.range[0]'], latest_relay_val['zoom_size']['xaxis.range[1]']]))
@@ -273,8 +266,7 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local, latest_re
                Output('foo', 'figure'),
                Output('bar', 'figure'),
                Output('baz', 'figure')],
-              [Input(last_clicked_id, 'value'), Input('last_zoomed_obj', 'value')],
-              [State(last_clicked_id2, 'value')])
+              [Input(last_clicked_id, 'value'), Input('last_zoomed_obj', 'value')])
 
 def update_onclick_callback(*raw_last_clickdata):
     last_clickdata = json.loads(raw_last_clickdata[:-1][0])
