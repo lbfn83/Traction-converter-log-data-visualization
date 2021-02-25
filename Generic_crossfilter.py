@@ -6,6 +6,10 @@ import pandas as pd
 from dash.dependencies import Input, Output, State
 import plotly.express as px
 
+
+#dash version 1.10.0
+#dash renderer 1.3.0
+
 # Things to solve
 # ex) select 1, 2 in graph1
 # then select 3 in graph2
