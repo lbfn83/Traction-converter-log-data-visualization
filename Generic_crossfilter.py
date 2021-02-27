@@ -11,6 +11,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.config['suppress_callback_exceptions'] = True
 
+
 # make a sample data frame with 6 columns
 np.random.seed(0)
 df = pd.DataFrame({"Col " + str(i+1): np.random.rand(30) for i in range(6)})
@@ -69,19 +70,22 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
     [Output('g1', 'figure'),
      Output('g2', 'figure'),
      Output('g3', 'figure'),
+     Output('g1', 'selectedData'),
+     Output('g2', 'selectedData'),
+     Output('g3', 'selectedData'),
      ],
     [Input('g1', 'selectedData'),
      Input('g2', 'selectedData'),
      Input('g3', 'selectedData')]
 )
 def callback(selection1, selection2, selection3):
+    ctx = dash.callback_context
     selectedpoints = df.index
     #for loop here  / element of list is extracted one by one  / the premise here is that previous selected value is not returned
     #but only current one would be returned/ this is proved to be worng.
     #selection2 update -> selection1 update / 이 경우 selection2 만 반영되는 문제가 발생한다.
     #time stamp comparison should be implemented / hidden input을 만들어 계속 여기를 update해주고..
     #그것 보다 최근의 것만 반영하도록 해줘야 한다.
-
     #이걸 for문으로 돌리는게 문제인듯 / intersection..
     for selected_data in [selection1, selection2, selection3]:
         if selected_data and selected_data['points']:
