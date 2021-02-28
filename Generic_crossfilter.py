@@ -3,7 +3,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import numpy as np
 import pandas as pd
-from dash.dependencies import Input, Output, MATCH, ALL
+from dash.dependencies import Input, Output, State,MATCH, ALL
 import plotly.express as px
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -43,9 +43,7 @@ for i in range(Graph_count):
                 'type': 'dcc_graph',
                 'index': i
             },
-            # Initial Update the graph separately,
-            # Since callback should filter out the update value to none to block the circular behavior
-            # figure=graph_figures[i]
+
         )
     )
 
@@ -99,9 +97,10 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
     [Output({'type': 'dcc_graph', 'index': ALL}, 'figure'),
      Output({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
     ],
-    Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData')
+    [Input({'type': 'dcc_graph', 'index': MATCH}, 'selectedData')],
+    [State({'type': 'dcc_graph', 'index': MATCH}, 'id')]
 )
-def callback(sel_values):
+def callback(sel_values, id):
     ctx = dash.callback_context
 
 
@@ -109,20 +108,22 @@ def callback(sel_values):
 
     #이걸 for문으로 돌리는게 문제인듯 / intersection..
 
-    for selected_data in sel_values:
-        if selected_data and selected_data['points']:
-            selectedpoints = np.intersect1d(selectedpoints,
-                [p['customdata'] for p in selected_data['points']])
 
+    if sel_values == None:
+        return_1h = [get_figure(df, "Col {}".format(2 * (i + 1) - 1), "Col {}".format(2 * (i + 1)), [], sel_values) for i in range(Graph_count)]
+        return [return_1h, None, None, None, None]
+    else:
+        # dictionary and for loop
+        # https://realpython.com/iterate-through-dictionary-python/
+        # sel_values 의 값이 어떻게 오는지 잘 확인하련...
 
+        for selected_data in sel_values:
+            if selected_data and selected_data['points']:
+                selectedpoints = np.intersect1d(selectedpoints,
+                    [p['customdata'] for p in selected_data['points']])
 
-    result_1h=[get_figure(df, "Col {}".format(2*(i+1)-1), "Col {}".format(2*(i+1)), selectedpoints, sel_values[i]) for i in range(len(sel_values))]
-
-    result_2h = list()
-    for i in range(len(sel_values)):
-            result_2h.append(None)
-    result = [result_1h, result_2h]
-    return result
+        return_1h = [get_figure(df, "Col {}".format(2 * (i + 1) - 1), "Col {}".format(2 * (i + 1)), selectedpoints, sel_values) for i in range(Graph_count)  ]
+        return [return_1h, None, None, None, None]
 
 
 if __name__ == '__main__':
