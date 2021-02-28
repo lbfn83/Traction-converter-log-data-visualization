@@ -3,36 +3,55 @@ import dash_core_components as dcc
 import dash_html_components as html
 import numpy as np
 import pandas as pd
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, MATCH, ALL
 import plotly.express as px
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
+
+# Find out why we use the below line
 app.config['suppress_callback_exceptions'] = True
 
+#directory select
 
-# make a sample data frame with 6 columns
+#Read the list of files and put the list into variable
+
+#and then using panda all of data aggregated in single data frame
+
+
+
+#This part should be later implemented with text inputs
+Graph_count = 8
+
 np.random.seed(0)
-df = pd.DataFrame({"Col " + str(i+1): np.random.rand(30) for i in range(6)})
+df = pd.DataFrame({"Col " + str(i+1): np.random.rand(30) for i in range(Graph_count*2)})
+
+
+Graph_container = html.Div(id='graph-container', children=[])
 
 app.layout = html.Div([
-    html.Div(
-        dcc.Graph(id='g1', config={'displayModeBar': False}),
-        className='four columns'
-    ),
-    html.Div(
-        dcc.Graph(id='g2', config={'displayModeBar': False}),
-        className='four columns'
-        ),
-    html.Div(
-        dcc.Graph(id='g3', config={'displayModeBar': False}),
-        className='four columns'
-    )
+
+    Graph_container,
+
 ], className='row')
 
+
+for i in range(Graph_count):
+    Graph_container.children.append( dcc.Graph (
+            id={
+                'type': 'dcc_graph',
+                'index': i
+            },
+            # Initial Update the graph separately,
+            # Since callback should filter out the update value to none to block the circular behavior
+            # figure=graph_figures[i]
+        )
+    )
+
+#how to make our graph more aesthetic ?
 def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
-    #drag 해서 생성된 사각형 범주를 가리키는 건데... 이건 내가 만들려는 것과 
+    #drag 해서 생성된 사각형 범주를 가리키는 건데... 이건 내가 만들려는 것과
     #관계가 없기 때문에... 삭제 가능
 
     # if selectedpoints_local and selectedpoints_local['range']:
@@ -48,6 +67,7 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
     # attribute. see
     # https://medium.com/@plotlygraphs/notes-from-the-latest-plotly-js-release-b035a5b43e21
     # for an explanation
+
     fig = px.scatter(df, x=df[x_col], y=df[y_col], text=df.index)
 
     fig.update_traces(selectedpoints=selectedpoints,
@@ -66,39 +86,43 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
 # we saparately define the reflection of our data to the graph
 # as when first boot up, this call back will invoke the get figure without any selected points
 # and populate the graph
+
+
+# Another possibility is using MATCH /
+# internal logic should be more refined to implement in that regard, though.
+# especailly for argument that should be sent to get_figure func
+# but really? how MATCH in Output function works?
+# What we will need is ctx for that.
+
+#The selected Data event in the past is persistent, so gotta make sure that the selecteddata events turning into Null everytime this callback activated
 @app.callback(
-    [Output('g1', 'figure'),
-     Output('g2', 'figure'),
-     Output('g3', 'figure'),
-     Output('g1', 'selectedData'),
-     Output('g2', 'selectedData'),
-     Output('g3', 'selectedData'),
-     ],
-    [Input('g1', 'selectedData'),
-     Input('g2', 'selectedData'),
-     Input('g3', 'selectedData')]
+    [Output({'type': 'dcc_graph', 'index': ALL}, 'figure'),
+     Output({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
+    ],
+    Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData')
 )
-def callback(selection1, selection2, selection3):
+def callback(sel_values):
     ctx = dash.callback_context
+
+
     selectedpoints = df.index
-    #for loop here  / element of list is extracted one by one  / the premise here is that previous selected value is not returned
-    #but only current one would be returned/ this is proved to be worng.
-    #selection2 update -> selection1 update / 이 경우 selection2 만 반영되는 문제가 발생한다.
-    #time stamp comparison should be implemented / hidden input을 만들어 계속 여기를 update해주고..
-    #그것 보다 최근의 것만 반영하도록 해줘야 한다.
+
     #이걸 for문으로 돌리는게 문제인듯 / intersection..
-    for selected_data in [selection1, selection2, selection3]:
+
+    for selected_data in sel_values:
         if selected_data and selected_data['points']:
             selectedpoints = np.intersect1d(selectedpoints,
                 [p['customdata'] for p in selected_data['points']])
 
-    return [get_figure(df, "Col 1", "Col 2", selectedpoints, selection1),
-            get_figure(df, "Col 3", "Col 4", selectedpoints, selection2),
-            get_figure(df, "Col 5", "Col 6", selectedpoints, selection3),
-            None,
-            None,
-            None,
-            ]
+
+
+    result_1h=[get_figure(df, "Col {}".format(2*(i+1)-1), "Col {}".format(2*(i+1)), selectedpoints, sel_values[i]) for i in range(len(sel_values))]
+
+    result_2h = list()
+    for i in range(len(sel_values)):
+            result_2h.append(None)
+    result = [result_1h, result_2h]
+    return result
 
 
 if __name__ == '__main__':
