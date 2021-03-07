@@ -3,8 +3,13 @@ import dash_core_components as dcc
 import dash_html_components as html
 import numpy as np
 import pandas as pd
-from dash.dependencies import Input, Output, MATCH, ALL
+from dash.dependencies import Input, Output, MATCH, ALL, State
 import plotly.express as px
+from flask_caching import Cache
+from queue import PriorityQueue as PQ
+
+
+
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
@@ -12,6 +17,15 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 # Find out why we use the below line
 app.config['suppress_callback_exceptions'] = True
+
+CACHE_CONFIG = {
+    # try 'filesystem' if you don't want to setup redis
+    'CACHE_TYPE': 'simple',
+    #'CACHE_REDIS_URL': os.environ.get('REDIS_URL', 'redis://localhost:6379')
+}
+cache = Cache()
+cache.init_app(app.server, config=CACHE_CONFIG)
+
 
 #directory select
 
@@ -48,6 +62,12 @@ for i in range(Graph_count):
             # figure=graph_figures[i]
         )
     )
+
+@cache.memoize()
+def global_store(selected_points):
+    # simulate expensive query
+
+    return selected_points
 
 #how to make our graph more aesthetic ?
 def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
@@ -95,28 +115,103 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
 # What we will need is ctx for that.
 
 #The selected Data event in the past is persistent, so gotta make sure that the selecteddata events turning into Null everytime this callback activated
+
+
 @app.callback(
     [Output({'type': 'dcc_graph', 'index': ALL}, 'figure'),
      Output({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
     ],
-    Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData')
+    Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
+    State({'type': 'dcc_graph', 'index': ALL}, 'clickData')
+
 )
-def callback(sel_values):
+def callback(sel_values, clicked):
     ctx = dash.callback_context
 
-
-    selectedpoints = df.index
-
-    #이걸 for문으로 돌리는게 문제인듯 / intersection..
-
-    for selected_data in sel_values:
-        if selected_data and selected_data['points']:
-            selectedpoints = np.intersect1d(selectedpoints,
-                [p['customdata'] for p in selected_data['points']])
+    Sel_PtQueue = cache.get("sel_points")
 
 
 
-    result_1h=[get_figure(df, "Col {}".format(2*(i+1)-1), "Col {}".format(2*(i+1)), selectedpoints, sel_values[i]) for i in range(len(sel_values))]
+    if all(elem == None for elem in sel_values ):
+        Sel_PtQueue = []
+
+    else:
+
+        # Interface to add or remove selected points
+        # set difference of A(Callback input)-B(Cache) will identify newly added single point
+        # in case of removing selected point, we might have empty set for the above case
+        # if Intersection between A(Callback input) and B(Cache) is the same as (Cache ) then
+        # yes -> we keep the old log of selected points
+        # no -> if cache has more than A(Callback input) we return A
+        #deselect event -> [{'points': []}, None, None, None, None, None, None, None]
+        #deselect event 아주 예전에 선택한 것을 deselect 한다면.. 가장 최근에 기억하는 점 하나만 딸랑 보낸다.
+        #가장 최근에 택한걸 deselect하게 되면 [] 가 가버린다는 거지..
+        # 1. deselect event 를 구별하는 법
+        # 2. 그 담에는 한 점 씩만 지울 수 있다. 즉.. state 를 보고 값을 가공해야한다.
+
+        # click evet 를 state로 보내야 할 수 도?
+
+
+        #doesn't specify what point is deselected but just sending empty point.
+        #shift click the selected dots should be defined as reset?
+
+
+        selectedpoints = df.index
+        # 이걸 for문으로 돌리는게 문제인듯 / intersection..
+        sanityCheckCnt = 0
+        for selected_data in sel_values:
+            #only callback from one graph where the event occurred have valid data/
+            # below if statement will filter out the access of unnecessary call back data from other graphs which has empty value
+            if selected_data and (selected_data['points']!=None):
+                sanityCheckCnt = sanityCheckCnt + 1
+
+                rawSelPtCallback = [p['customdata'] for p in selected_data['points']]
+
+
+
+                selPtDiff = np.setdiff1d( rawSelPtCallback, Sel_PtQueue )
+
+        if sanityCheckCnt > 1 :
+            raise Exception('only single value from callback contains valid value :  {} of them has shown.. weird'.format(sanityCheckCnt))
+        else:
+        # SanityCheck is for number of valid data from callback : should be from single graph rather than multiple ones
+        # However, desection event will bypass for loop above so sanityCheckCnt will be 0
+
+        # selPtDiff is to discern between selection case and deselection case
+        # if lenth of selPtdiff is 0
+        # chances are it might be deseletion case
+        #
+            if len(selPtDiff) == 1:
+                Sel_PtQueue.append(selPtDiff[-1])
+            # in case of empty after set difference, need to check intersection to double check there is any
+            elif len(selPtDiff) == 0:
+                #rawSelPtCallback and ... other..
+                temp_inter = np.intersect1d(rawSelPtCallback, Sel_PtQueue)
+                # if the intersection value is not same as cache
+                if np.array_equal(temp_inter, Sel_PtQueue) == False:
+                    Sel_PtQueue = rawSelPtCallback
+                    print("")
+
+
+            else :
+                print("unexpected scenario")
+
+
+        # else문에서 나오는건 ndarray 형이므로 list 로 바꾼다
+
+        #ndarray
+
+    # 여기서 부터 로직을... 생각해보자..
+    # 보통 점이 추가된다면 하나씩 추가된다. incrementally 점만 추가해주면 된다 저런 교집합은 필요없다.
+    # 만일 점이 모두 초기화 되는 경우가 있을 수 있다. [] 이렇게 오는 경우.. 그냥 초기화 하면 된다.
+
+
+    #since the data type coming out from else statements giving us numpy.ndarray
+    cache.set( "sel_points", Sel_PtQueue)
+
+
+
+    result_1h=[get_figure(df, "Col {}".format(2*(i+1)-1), "Col {}".format(2*(i+1)), Sel_PtQueue, sel_values[i]) for i in range(len(sel_values))]
 
     result_2h = list()
     for i in range(len(sel_values)):
