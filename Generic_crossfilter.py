@@ -93,8 +93,8 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
     fig.update_traces(selectedpoints=selectedpoints,
                       customdata=df.index,
                       mode='markers+text', marker={ 'color': 'rgba(0, 116, 217, 0.7)', 'size': 20 }, unselected={'marker': { 'opacity': 0.3 }, 'textfont': { 'color': 'rgba(0, 0, 0, 0)' }})
-
-    fig.update_layout(margin={'l': 20, 'r': 0, 'b': 15, 't': 5}, clickmode='event+select')#dragmode='select',, hovermode=False
+    #margin={'l': 20, 'r': 0, 'b': 15, 't': 5},
+    fig.update_layout( clickmode='event+select', title="abcd")#dragmode='select',, hovermode=False
 
     # fig.add_shape(dict({'type': 'rect',
     #                     'line': { 'width': 1, 'dash': 'dot', 'color': 'darkgrey' }},
@@ -122,10 +122,11 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
      Output({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
     ],
     Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
-    State({'type': 'dcc_graph', 'index': ALL}, 'clickData')
+    State({'type': 'dcc_graph', 'index': ALL}, 'clickData'),
+    State({'type': 'dcc_graph', 'index': ALL}, 'id')
 
 )
-def callback(sel_values, clicked):
+def callback(sel_values, clicked, id):
     ctx = dash.callback_context
 
     Sel_PtQueue = cache.get("sel_points")
@@ -172,7 +173,7 @@ def callback(sel_values, clicked):
                 selPtDiff = np.setdiff1d( rawSelPtCallback, Sel_PtQueue )
 
         if sanityCheckCnt > 1 :
-            raise Exception('only single value from callback contains valid value :  {} of them has shown.. weird'.format(sanityCheckCnt))
+            raise Exception('only single value from callback should contain the valid value :  {} of them has shown.. weird'.format(sanityCheckCnt))
         else:
         # SanityCheck is for number of valid data from callback : should be from single graph rather than multiple ones
         # However, desection event will bypass for loop above so sanityCheckCnt will be 0
@@ -186,11 +187,15 @@ def callback(sel_values, clicked):
             # in case of empty after set difference, need to check intersection to double check there is any
             elif len(selPtDiff) == 0:
                 #rawSelPtCallback and ... other..
-                temp_inter = np.intersect1d(rawSelPtCallback, Sel_PtQueue)
-                # if the intersection value is not same as cache
-                if np.array_equal(temp_inter, Sel_PtQueue) == False:
-                    Sel_PtQueue = rawSelPtCallback
-                    print("")
+                Sel_PtQueue = rawSelPtCallback
+                # # really hard to implement since raw value of selected point is going to be differnt from which graph the event evoked from
+                # temp_inter = np.intersect1d(rawSelPtCallback, Sel_PtQueue)
+                #
+                #     # if the intersection value is not same as cache
+                #     # 여러 그래프에서... 다른 selected event 가 나올 수 있으니.. 아래 if 문은 옳지 않은거지
+                # if np.array_equal(temp_inter, Sel_PtQueue) == False:
+                #     Sel_PtQueue = rawSelPtCallback
+                #     print("")
 
 
             else :
