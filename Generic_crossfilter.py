@@ -6,8 +6,9 @@ import pandas as pd
 from dash.dependencies import Input, Output, MATCH, ALL, State
 import plotly.express as px
 from flask_caching import Cache
+import _PandaFileHandling as PFH
 from queue import PriorityQueue as PQ
-
+from dash.exceptions import PreventUpdate
 
 
 
@@ -36,10 +37,23 @@ cache.init_app(app.server, config=CACHE_CONFIG)
 
 
 #This part should be later implemented with text inputs
-Graph_count = 8
 
-np.random.seed(0)
-df = pd.DataFrame({"Col " + str(i+1): np.random.rand(30) for i in range(Graph_count*2)})
+# Graph_count = 8
+
+# np.random.seed(0)
+# df = pd.DataFrame({"Col " + str(i+1): np.random.rand(30) for i in range(Graph_count*2)})
+
+
+full_path = PFH.print_file_path_list()
+
+df = PFH.Raw_Data_to_Pandas_DF(full_path)
+
+filename_list = list()
+
+for column in df.columns:
+    if 'time' not in column:
+        filename_list.append(column)
+Graph_count = len(filename_list)
 
 
 Graph_container = html.Div(id='graph-container', children=[])
@@ -70,7 +84,7 @@ def global_store(selected_points):
     return selected_points
 
 #how to make our graph more aesthetic ?
-def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
+def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
     #drag 해서 생성된 사각형 범주를 가리키는 건데... 이건 내가 만들려는 것과
     #관계가 없기 때문에... 삭제 가능
 
@@ -96,10 +110,21 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
     #margin={'l': 20, 'r': 0, 'b': 15, 't': 5},
     fig.update_layout( clickmode='event+select', title="abcd")#dragmode='select',, hovermode=False
 
+
+
+
+
+
+    # y axis shouldn't be synced as each data point has different scope of value / Only x axis matters
+    if (relay_value is not None) and ('xaxis.range[0]' in relay_value):
+        fig.update_layout(xaxis = dict(range=[relay_value['xaxis.range[0]'], relay_value['xaxis.range[1]']]))
+
+
     # fig.add_shape(dict({'type': 'rect',
     #                     'line': { 'width': 1, 'dash': 'dot', 'color': 'darkgrey' }},
     #                    **selection_bounds))
     return fig
+
 
 # this callback defines 3 figures
 # as a function of the intersection of their 3 selections
@@ -120,87 +145,99 @@ def get_figure(df, x_col, y_col, selectedpoints, selectedpoints_local):
 @app.callback(
     [Output({'type': 'dcc_graph', 'index': ALL}, 'figure'),
      Output({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
+    Output({'type': 'dcc_graph', 'index': ALL}, 'relayoutData'),
     ],
-    Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
+    [Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
+     Input({'type': 'dcc_graph', 'index': ALL}, 'relayoutData'),
+     ],
     State({'type': 'dcc_graph', 'index': ALL}, 'clickData'),
     State({'type': 'dcc_graph', 'index': ALL}, 'id')
 
 )
-def callback(sel_values, clicked, id):
+def callback(sel_values, relay_values ,clicked, id):
     ctx = dash.callback_context
 
+
+
+
     Sel_PtQueue = cache.get("sel_points")
-
-
-
-    if all(elem == None for elem in sel_values ):
+    if Sel_PtQueue is None:
         Sel_PtQueue = []
+    real_relay_val = cache.get("relay_val")
+    #'' is occurred at the initialization
+    if ctx.triggered[0]['prop_id'].split('.')[-1] == 'selectedData' or ctx.triggered[0]['prop_id'].split('.')[-1] == '':
 
-    else:
+        if all(elem == None for elem in sel_values ):
+            Sel_PtQueue = []
 
-        # Interface to add or remove selected points
-        # set difference of A(Callback input)-B(Cache) will identify newly added single point
-        # in case of removing selected point, we might have empty set for the above case
-        # if Intersection between A(Callback input) and B(Cache) is the same as (Cache ) then
-        # yes -> we keep the old log of selected points
-        # no -> if cache has more than A(Callback input) we return A
-        #deselect event -> [{'points': []}, None, None, None, None, None, None, None]
-        #deselect event 아주 예전에 선택한 것을 deselect 한다면.. 가장 최근에 기억하는 점 하나만 딸랑 보낸다.
-        #가장 최근에 택한걸 deselect하게 되면 [] 가 가버린다는 거지..
-        # 1. deselect event 를 구별하는 법
-        # 2. 그 담에는 한 점 씩만 지울 수 있다. 즉.. state 를 보고 값을 가공해야한다.
-
-        # click evet 를 state로 보내야 할 수 도?
-
-
-        #doesn't specify what point is deselected but just sending empty point.
-        #shift click the selected dots should be defined as reset?
-
-
-        selectedpoints = df.index
-        # 이걸 for문으로 돌리는게 문제인듯 / intersection..
-        sanityCheckCnt = 0
-        for selected_data in sel_values:
-            #only callback from one graph where the event occurred have valid data/
-            # below if statement will filter out the access of unnecessary call back data from other graphs which has empty value
-            if selected_data and (selected_data['points']!=None):
-                sanityCheckCnt = sanityCheckCnt + 1
-
-                rawSelPtCallback = [p['customdata'] for p in selected_data['points']]
-
-
-
-                selPtDiff = np.setdiff1d( rawSelPtCallback, Sel_PtQueue )
-
-        if sanityCheckCnt > 1 :
-            raise Exception('only single value from callback should contain the valid value :  {} of them has shown.. weird'.format(sanityCheckCnt))
         else:
-        # SanityCheck is for number of valid data from callback : should be from single graph rather than multiple ones
-        # However, desection event will bypass for loop above so sanityCheckCnt will be 0
 
-        # selPtDiff is to discern between selection case and deselection case
-        # if lenth of selPtdiff is 0
-        # chances are it might be deseletion case
-        #
-            if len(selPtDiff) == 1:
-                Sel_PtQueue.append(selPtDiff[-1])
-            # in case of empty after set difference, need to check intersection to double check there is any
-            elif len(selPtDiff) == 0:
-                #rawSelPtCallback and ... other..
-                Sel_PtQueue = rawSelPtCallback
-                # # really hard to implement since raw value of selected point is going to be differnt from which graph the event evoked from
-                # temp_inter = np.intersect1d(rawSelPtCallback, Sel_PtQueue)
-                #
-                #     # if the intersection value is not same as cache
-                #     # 여러 그래프에서... 다른 selected event 가 나올 수 있으니.. 아래 if 문은 옳지 않은거지
-                # if np.array_equal(temp_inter, Sel_PtQueue) == False:
-                #     Sel_PtQueue = rawSelPtCallback
-                #     print("")
+            # Interface to add or remove selected points
+            # set difference of A(Callback input)-B(Cache) will identify newly added single point
+            # in case of removing selected point, we might have empty set for the above case
+            # if Intersection between A(Callback input) and B(Cache) is the same as (Cache ) then
+            # yes -> we keep the old log of selected points
+            # no -> if cache has more than A(Callback input) we return A
+            #deselect event -> [{'points': []}, None, None, None, None, None, None, None]
+            #deselect event 아주 예전에 선택한 것을 deselect 한다면.. 가장 최근에 기억하는 점 하나만 딸랑 보낸다.
+            #가장 최근에 택한걸 deselect하게 되면 [] 가 가버린다는 거지..
+            # 1. deselect event 를 구별하는 법
+            # 2. 그 담에는 한 점 씩만 지울 수 있다. 즉.. state 를 보고 값을 가공해야한다.
+
+            # click evet 를 state로 보내야 할 수 도?
 
 
-            else :
-                print("unexpected scenario")
+            #doesn't specify what point is deselected but just sending empty point.
+            #shift click the selected dots should be defined as reset?
 
+
+            selectedpoints = df.index
+            # 이걸 for문으로 돌리는게 문제인듯 / intersection..
+            sanityCheckCnt = 0
+            for selected_data in sel_values:
+                #only callback from one graph where the event occurred have valid data/
+                # below if statement will filter out the access of unnecessary call back data from other graphs which has empty value
+                if selected_data and (selected_data['points']!=None):
+                    sanityCheckCnt = sanityCheckCnt + 1
+
+                    rawSelPtCallback = [p['customdata'] for p in selected_data['points']]
+
+                    selPtDiff = np.setdiff1d( rawSelPtCallback, Sel_PtQueue )
+
+            if sanityCheckCnt > 1 :
+                raise Exception('only single value from callback should contain the valid value :  {} of them has shown.. weird'.format(sanityCheckCnt))
+            else:
+            # SanityCheck is for number of valid data from callback : should be from single graph rather than multiple ones
+            # However, desection event will bypass for loop above so sanityCheckCnt will be 0
+
+            # selPtDiff is to discern between selection case and deselection case
+            # if lenth of selPtdiff is 0
+            # chances are it might be deseletion case
+            #
+                if len(selPtDiff) == 1:
+                    Sel_PtQueue.append(selPtDiff[-1])
+                # in case of empty after set difference, need to check intersection to double check there is any
+                elif len(selPtDiff) == 0:
+                    #rawSelPtCallback and ... other..
+                    Sel_PtQueue = rawSelPtCallback
+                    # # really hard to implement since raw value of selected point is going to be differnt from which graph the event evoked from
+                    # temp_inter = np.intersect1d(rawSelPtCallback, Sel_PtQueue)
+                    #
+                    #     # if the intersection value is not same as cache
+                    #     # 여러 그래프에서... 다른 selected event 가 나올 수 있으니.. 아래 if 문은 옳지 않은거지
+                    # if np.array_equal(temp_inter, Sel_PtQueue) == False:
+                    #     Sel_PtQueue = rawSelPtCallback
+                    #     print("")
+
+
+                else :
+                    print("unexpected scenario")
+
+    elif ctx.triggered[0]['prop_id'].split('.')[-1] == 'relayoutData':
+        real_relay_val = None
+        for relay_val in relay_values:
+            if (relay_val is not None) and ('xaxis.range[0]' in relay_val):
+                real_relay_val = relay_val
 
         # else문에서 나오는건 ndarray 형이므로 list 로 바꾼다
 
@@ -213,16 +250,19 @@ def callback(sel_values, clicked, id):
 
     #since the data type coming out from else statements giving us numpy.ndarray
     cache.set( "sel_points", Sel_PtQueue)
+    cache.set("relay_val", real_relay_val)
 
+    result_1st=[get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), Sel_PtQueue, real_relay_val) for i in range(len(filename_list))]
 
-
-    result_1h=[get_figure(df, "Col {}".format(2*(i+1)-1), "Col {}".format(2*(i+1)), Sel_PtQueue, sel_values[i]) for i in range(len(sel_values))]
-
-    result_2h = list()
+    result_2nd = list()
+    result_3rd = list()
     for i in range(len(sel_values)):
-            result_2h.append(None)
-    result = [result_1h, result_2h]
+            result_2nd.append(None)
+            result_3rd.append(None)
+    result = [result_1st, result_2nd, result_3rd]
     return result
+
+
 
 
 if __name__ == '__main__':
