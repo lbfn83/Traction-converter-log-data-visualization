@@ -65,24 +65,6 @@ app.layout = html.Div([
 ], className='row')
 
 
-for i in range(Graph_count):
-    Graph_container.children.append( dcc.Graph (
-            id={
-                'type': 'dcc_graph',
-                'index': i
-            },
-            # Initial Update the graph separately,
-            # Since callback should filter out the update value to none to block the circular behavior
-            # figure=graph_figures[i]
-        )
-    )
-
-@cache.memoize()
-def global_store(selected_points):
-    # simulate expensive query
-
-    return selected_points
-
 #how to make our graph more aesthetic ?
 def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
     #drag 해서 생성된 사각형 범주를 가리키는 건데... 이건 내가 만들려는 것과
@@ -108,6 +90,8 @@ def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
                       customdata=df.index,
                       mode='markers+text', marker={ 'color': 'rgba(0, 116, 217, 0.7)', 'size': 20 }, unselected={'marker': { 'opacity': 0.3 }, 'textfont': { 'color': 'rgba(0, 0, 0, 0)' }})
     #margin={'l': 20, 'r': 0, 'b': 15, 't': 5},
+
+
     fig.update_layout( clickmode='event+select', title="abcd")#dragmode='select',, hovermode=False
 
 
@@ -116,14 +100,32 @@ def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
 
 
     # y axis shouldn't be synced as each data point has different scope of value / Only x axis matters
-    if (relay_value is not None) and ('xaxis.range[0]' in relay_value):
-        fig.update_layout(xaxis = dict(range=[relay_value['xaxis.range[0]'], relay_value['xaxis.range[1]']]))
+    # if (relay_value is not None) and ('xaxis.range[0]' in relay_value):
+    #     fig.update_layout(xaxis = dict(range=[relay_value['xaxis.range[0]'], relay_value['xaxis.range[1]']]))
 
 
     # fig.add_shape(dict({'type': 'rect',
     #                     'line': { 'width': 1, 'dash': 'dot', 'color': 'darkgrey' }},
     #                    **selection_bounds))
     return fig
+init_graph_data = [get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), [],
+                         None) for i in range(len(filename_list))]
+
+for i in range(Graph_count):
+    Graph_container.children.append( dcc.Graph (
+            id={
+                'type': 'dcc_graph',
+                'index': i
+            },
+            figure = init_graph_data[i]
+
+            # Initial Update the graph separately,
+            # Since callback should filter out the update value to none to block the circular behavior
+            # figure=graph_figures[i]
+        )
+    )
+
+
 
 
 # this callback defines 3 figures
@@ -145,33 +147,30 @@ def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
 @app.callback(
     [Output({'type': 'dcc_graph', 'index': ALL}, 'figure'),
      Output({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
-    Output({'type': 'dcc_graph', 'index': ALL}, 'relayoutData'),
+     Output({'type': 'dcc_graph', 'index': ALL}, 'relayoutData'),
     ],
-    [Input({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
+    [Input({'type': 'dcc_graph', 'index': ALL}, 'clickData'),
      Input({'type': 'dcc_graph', 'index': ALL}, 'relayoutData'),
      ],
-    State({'type': 'dcc_graph', 'index': ALL}, 'clickData'),
-    State({'type': 'dcc_graph', 'index': ALL}, 'id')
-
+    State({'type': 'dcc_graph', 'index': ALL}, 'figure')
 )
-def callback(sel_values, relay_values ,clicked, id):
+def callback(arg_sel_values, arg_relay_values, fig_val):
     ctx = dash.callback_context
 
-
-
-
+    # 이건 callback state로 받아오게 해도 되는 거 아닌가 싶기도 하지만.. sel ponit는 애초에 양이 많지 않으므로 큰 문제가 되지 않을수도
     Sel_PtQueue = cache.get("sel_points")
     if Sel_PtQueue is None:
         Sel_PtQueue = []
+
     real_relay_val = cache.get("relay_val")
     #'' is occurred at the initialization
+    # if the event is selected Data // will be replced with
     if ctx.triggered[0]['prop_id'].split('.')[-1] == 'selectedData' or ctx.triggered[0]['prop_id'].split('.')[-1] == '':
 
-        if all(elem == None for elem in sel_values ):
-            Sel_PtQueue = []
-
+        if all(elem == None for elem in arg_sel_values):
+            print("A")
+            # do nothing
         else:
-
             # Interface to add or remove selected points
             # set difference of A(Callback input)-B(Cache) will identify newly added single point
             # in case of removing selected point, we might have empty set for the above case
@@ -194,7 +193,7 @@ def callback(sel_values, relay_values ,clicked, id):
             selectedpoints = df.index
             # 이걸 for문으로 돌리는게 문제인듯 / intersection..
             sanityCheckCnt = 0
-            for selected_data in sel_values:
+            for selected_data in arg_sel_values:
                 #only callback from one graph where the event occurred have valid data/
                 # below if statement will filter out the access of unnecessary call back data from other graphs which has empty value
                 if selected_data and (selected_data['points']!=None):
@@ -233,11 +232,36 @@ def callback(sel_values, relay_values ,clicked, id):
                 else :
                     print("unexpected scenario")
 
+        result_1st = [get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), Sel_PtQueue,
+                                 real_relay_val) for i in range(len(filename_list))]
+
+    # sanity check required ? theorotically only one graph will throw valid value and
+    # other values should be none
+    # relayoutData event is called in initialization
+    # Autosize 일 경우 how to process / {'autosize': True}
+
     elif ctx.triggered[0]['prop_id'].split('.')[-1] == 'relayoutData':
         real_relay_val = None
-        for relay_val in relay_values:
-            if (relay_val is not None) and ('xaxis.range[0]' in relay_val):
-                real_relay_val = relay_val
+
+        classifier = [('autosize' in relay_val.keys(), relay_val ) for relay_val in arg_relay_values if type(relay_val) == dict]
+
+        if len(classifier) > 1 :
+            print("init. nothing has to be done")
+            #this means zoom in
+
+        elif len(classifier) == 1 :
+            if 'xaxis.autorange' in classifier[0][-1]:
+                for fig_item in fig_val:
+                    fig_item['layout']['xaxis'] = {"autorange" : True}
+                    fig_item['layout']['yaxis'] = {"autorange" : True}
+            elif 'xaxis.range[0]' in classifier[0][-1]:
+                for fig_item in fig_val:
+                    fig_item['layout']['xaxis'] = {
+                        "range": [classifier[0][-1]['xaxis.range[0]'], classifier[0][-1]['xaxis.range[1]']]}
+            #this means max zoom out again
+
+        result_1st = fig_val
+
 
         # else문에서 나오는건 ndarray 형이므로 list 로 바꾼다
 
@@ -252,16 +276,15 @@ def callback(sel_values, relay_values ,clicked, id):
     cache.set( "sel_points", Sel_PtQueue)
     cache.set("relay_val", real_relay_val)
 
-    result_1st=[get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), Sel_PtQueue, real_relay_val) for i in range(len(filename_list))]
 
+    cache.set("result_1st", result_1st)
     result_2nd = list()
     result_3rd = list()
-    for i in range(len(sel_values)):
+    for i in range(len(arg_sel_values)):
             result_2nd.append(None)
             result_3rd.append(None)
     result = [result_1st, result_2nd, result_3rd]
     return result
-
 
 
 
