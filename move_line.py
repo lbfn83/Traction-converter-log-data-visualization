@@ -8,6 +8,7 @@ from flask_caching import Cache
 import re
 from pandas import DataFrame
 import sys
+import dash_table
 
 app = dash.Dash(__name__)
 
@@ -34,92 +35,107 @@ df.columns = ['x1', 'y1','x2', 'y2']
 
 line1_x = int(len(x1)/3)
 line2_x = int(len(x1)*2/3)
-app.layout = html.Div(className='row', children=[
-    dcc.Graph(
-        id='basic-interactions',
-        className='six columns',
-        figure={
-            'data': [{
-                'x': df['x1'],
-                'y': df['y1'],
 
-                'name': 'Trace 1',
-                'mode': 'markers',
-                'marker': {
-                    'size': 12
-                }
-            }, {
-                'x': df['x2'],
-                'y': df['y2'],
+app.layout = html.Div( children =[
 
-                'name': 'Trace 2',
-                'mode': 'markers',
-                'marker': {
-                    'size': 12
-                }
-            }],
-            'layout': {
-                'shapes': [{
-                    'type': 'line',
+                html.Div(className='table', children= [
+                    dash_table.DataTable(id='table',
+                    columns=[{"name": i, "id": i} for i in df.columns],
+                    data=df.to_dict('records'))
+                ], style={'display': 'inline-block', 'width' : "20%", 'border': '3px solid black' }),
+                          #'width': '350px','height': '100px','vertical-align': 'top', 'margin-left': '3vw', 'margin-top': '3vw'}),
 
-                    'x0': line1_x,
-                    'x1': line1_x,
-                    'xref': 'x',
-                    #a shape can be placed relative to an axis's position on the plot by adding the string ' domain' to the axis reference in the xref or yref attributes for shapes.
+                html.Div(className='Graph and Zoom data', children=[
 
-                    'y0': 0,
-                    'y1': 1,
-                    'yref': 'paper',
+                        html.Div(className='row', children=[
+                            dcc.Graph(
+                                id='basic-interactions',
+                                className='six columns',
+                                figure={
+                                    'data': [
+                                        {
+                                        'x': df['x1'],
+                                        'y': df['y1'],
 
-                    'line': {
-                        'width': 4,
-                        'color': 'rgb(30, 30, 30)',
-                        'dash': 'dashdot'
-                    }
-                },
-{
-                    'type': 'line',
+                                        'name': 'Trace 1',
+                                        'mode': 'markers',
+                                        'marker': {
+                                            'size': 12}
+                                        },
+                                        {
+                                        'x': df['x2'],
+                                        'y': df['y2'],
 
-                    'x0': line2_x,
-                    'x1': line2_x,
-                    'xref': 'x',
-                    #a shape can be placed relative to an axis's position on the plot by adding the string ' domain' to the axis reference in the xref or yref attributes for shapes.
+                                        'name': 'Trace 2',
+                                        'mode': 'markers',
+                                        'marker': {
+                                            'size': 12}
+                                        }
+                                    ],
+                                    'layout': {
+                                        'shapes': [
+                                            {
+                                            'type': 'line',
 
-                    'y0': 0,
-                    'y1': 1,
-                    'yref': 'paper',
+                                            'x0': line1_x,
+                                            'x1': line1_x,
+                                            'xref': 'x',
+                                            #a shape can be placed relative to an axis's position on the plot by adding the string ' domain' to the axis reference in the xref or yref attributes for shapes.
 
-                    'line': {
-                        'width': 4,
-                        'color': 'rgb(30, 30, 30)',
-                        'dash': 'dashdot'
-                    }
-                }
-                ]
-            }
-        },
-        config={
-            'editable': True,
-            'edits': {
-                'shapePosition': True
-            }
-        }
-    ),
-    html.Div(
-        className='six columns',
-        children=[
-            html.Div(
-                [
-                    dcc.Markdown(
-                        d("""
-                **Zoom and Relayout Data**
+                                            'y0': 0,
+                                            'y1': 1,
+                                            'yref': 'paper',
 
-            """)),
-                    html.Pre(id='relayout-data', style=styles['pre']),
-                ]
-            )
-        ]
-    )
+                                            'line': {
+                                                'width': 4,
+                                                'color': 'rgb(30, 30, 30)',
+                                                'dash': 'dashdot'}
+                                            },
+                                            {
+                                            'type': 'line',
+
+                                            'x0': line2_x,
+                                            'x1': line2_x,
+                                            'xref': 'x',
+                                            #a shape can be placed relative to an axis's position on the plot by adding the string ' domain' to the axis reference in the xref or yref attributes for shapes.
+
+                                            'y0': 0,
+                                            'y1': 1,
+                                            'yref': 'paper',
+
+                                            'line': {
+                                                'width': 4,
+                                                'color': 'rgb(30, 30, 30)',
+                                                'dash': 'dashdot'}
+                                            }
+                                        ]
+                                    }
+                                },
+                                config={
+                                    'editable': True,
+                                    'edits': {
+                                        'shapePosition': True
+                                    }
+                                }
+                            )
+                        ]),
+
+                        html.Div(
+                            className='six columns',
+                            children=[
+                                html.Div(
+                                    [
+                                        dcc.Markdown(
+                                            d("""
+                                    **Zoom and Relayout Data**
+                                """)),
+                                        html.Pre(id='relayout-data', style=styles['pre']),
+                                    ]
+                                )
+                            ]
+                        )
+                ],style={'display': 'inline-block', 'width' : '70%', 'vertical-align': 'top', })
+                         #'width': '1400px','height': '1000px','vertical-align': 'top', 'margin-left': '3vw', 'margin-top': '3vw'} )
 ])
 
 #what should be the return value of this function
