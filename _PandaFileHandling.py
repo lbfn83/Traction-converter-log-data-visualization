@@ -3,7 +3,7 @@ from tkinter import filedialog
 import os
 import pandas as pd
 import datetime
-
+import pandas as pd
 #using Tkinter, pop up the window to choose the directory and as an output send out the list of path + file names should be returned
 
 
@@ -15,7 +15,8 @@ def convert_matlab_timestamp(raw_tp):
     # order is days=0, seconds=0, microseconds=0, milliseconds=0, minutes=0, hours=0, weeks=0
     time_result = stdtime_matlab + datetime.timedelta(0, int(raw_tp / 10000000), raw_tp % 10000000 / 10)
 
-    return time_result
+    # try to make data consistent with pd.Timestamp that is mainly used in Generic crossfilter.py . can be taken out when it comes to using this module with other program
+    return pd.Timestamp(time_result)
 
 
 #input : directory selected
@@ -62,6 +63,7 @@ def Raw_Data_to_Pandas_DF(filepath):
                 df_indv = pd.read_csv(file_item, header=None, delimiter=';')
                 column_name = file_item.split("\\")[-1]
                 df_indv.columns = ["{}".format(column_name), "{} time".format(column_name)]
+
                 df_indv['{} time'.format(column_name)]=df_indv['{} time'.format(column_name)].apply(convert_matlab_timestamp)
 
                 # axis = 0 => stack dataframe vertically / axis = 1 => stack dataframe horizontally

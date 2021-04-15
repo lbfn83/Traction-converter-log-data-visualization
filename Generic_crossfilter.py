@@ -10,6 +10,8 @@ import _PandaFileHandling as PFH
 from queue import PriorityQueue as PQ
 from dash.exceptions import PreventUpdate
 
+import sys
+
 
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
@@ -31,18 +33,7 @@ cache.init_app(app.server, config=CACHE_CONFIG)
 #directory select
 
 #Read the list of files and put the list into variable
-
 #and then using panda all of data aggregated in single data frame
-
-
-
-#This part should be later implemented with text inputs
-
-# Graph_count = 8
-
-# np.random.seed(0)
-# df = pd.DataFrame({"Col " + str(i+1): np.random.rand(30) for i in range(Graph_count*2)})
-
 
 full_path = PFH.print_file_path_list()
 
@@ -83,7 +74,8 @@ def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
     # attribute. see
     # https://medium.com/@plotlygraphs/notes-from-the-latest-plotly-js-release-b035a5b43e21
     # for an explanation
-
+    line1_x =  df.iloc[int(len(df[x_col]) / 3)][x_col]
+    line2_x =  df.iloc[int(len(df[x_col]) / 3 * 2)][x_col]
     fig = px.scatter(df, x=df[x_col], y=df[y_col], text=df.index)
 
     fig.update_traces(selectedpoints=selectedpoints,
@@ -95,35 +87,107 @@ def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
     fig.update_layout( clickmode='event+select', title="abcd")#dragmode='select',, hovermode=False
 
 
-
-
-
-
     # y axis shouldn't be synced as each data point has different scope of value / Only x axis matters
     # if (relay_value is not None) and ('xaxis.range[0]' in relay_value):
     #     fig.update_layout(xaxis = dict(range=[relay_value['xaxis.range[0]'], relay_value['xaxis.range[1]']]))
 
 
-    # fig.add_shape(dict({'type': 'rect',
-    #                     'line': { 'width': 1, 'dash': 'dot', 'color': 'darkgrey' }},
-    #                    **selection_bounds))
+    fig.add_shape(
+        dict({'type': 'line',
+              'x0': line1_x, 'x1': line1_x,
+              'xref': 'x',
+            #a shape can be placed relative to an axis's position on the plot by adding the string ' domain' to the axis reference in the xref or yref attributes for shapes.
+              'y0': 0,
+              'y1': 1,
+              'yref': 'paper',
+
+              'line': {
+                  'width': 4,
+                  'color': 'rgb(30, 30, 30)',
+                  'dash': 'dashdot'}}),
+    )
+
+    fig.add_shape(
+        dict({'type': 'line',
+              'x0': line2_x, 'x1': line2_x,
+              'xref': 'x',
+            #a shape can be placed relative to an axis's position on the plot by adding the string ' domain' to the axis reference in the xref or yref attributes for shapes.
+              'y0': 0,
+              'y1': 1,
+              'yref': 'paper',
+
+              'line': {
+                  'width': 4,
+                  'color': 'rgb(30, 30, 30)',
+                  'dash': 'dashdot'}}),
+    )
     return fig
+####---------------------------------------------------------------------
+
+
 init_graph_data = [get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), [],
                          None) for i in range(len(filename_list))]
+
+
 
 for i in range(Graph_count):
     Graph_container.children.append( dcc.Graph (
             id={
                 'type': 'dcc_graph',
                 'index': i
+
             },
-            figure = init_graph_data[i]
+            figure = init_graph_data[i],
+
+            config={
+                #'editable': True,
+                'edits': {
+                    'shapePosition': True
+                }
+    },
 
             # Initial Update the graph separately,
             # Since callback should filter out the update value to none to block the circular behavior
             # figure=graph_figures[i]
         )
     )
+
+
+#what value should be conveyed as arguments?
+#value should be  "shapes[0].x0": 3.451221409677921,
+#colname should be ? x1 or x2 it doesn't matter since both of graphs have same x values
+def find_closest_x_val(value, df, colname):
+    pd_timeval = pd.Timestamp(value)
+    exactmatch = df[df[colname] == pd_timeval]
+
+    # return value should be changed
+    if not exactmatch.empty:
+        #여기 처리가 자꾸 다른 type의 리턴값이 나오도록 만드느느 듯
+        return str(exactmatch[colname].values[0])
+    else:
+        try:
+            flag = 0
+            lowerneighbour_ind = df[df[colname] < pd_timeval][colname].idxmax()
+            flag = 1
+            upperneighbour_ind = df[df[colname] > pd_timeval][colname].idxmin()
+        except ValueError:
+            #far left
+            if flag == 0:
+                return df.iloc[0][colname]
+            #far right
+            elif flag == 1:
+                return df.iloc[df.index.stop-1][colname]
+            else:
+                print("Unexpected error1")
+        except :
+            print("Unexpected error2:", sys.exc_info()[0])
+    print("wow {} {} lower index {} {}".format(value, type(value), lowerneighbour_ind, df.iloc[upperneighbour_ind][colname]))
+    if (abs(df.iloc[lowerneighbour_ind][colname] - pd_timeval) > abs(df.iloc[upperneighbour_ind][colname] - pd_timeval)):
+        return df.iloc[upperneighbour_ind][colname]
+    else:
+        return df.iloc[lowerneighbour_ind][colname]
+
+
 
 
 
@@ -146,146 +210,154 @@ for i in range(Graph_count):
 
 @app.callback(
     [Output({'type': 'dcc_graph', 'index': ALL}, 'figure'),
-     Output({'type': 'dcc_graph', 'index': ALL}, 'selectedData'),
      Output({'type': 'dcc_graph', 'index': ALL}, 'relayoutData'),
     ],
-    [Input({'type': 'dcc_graph', 'index': ALL}, 'clickData'),
+    [
      Input({'type': 'dcc_graph', 'index': ALL}, 'relayoutData'),
      ],
     State({'type': 'dcc_graph', 'index': ALL}, 'figure')
 )
-def callback(arg_sel_values, arg_relay_values, fig_val):
+def callback( arg_relay_values, fig_val):
     ctx = dash.callback_context
 
-    # 이건 callback state로 받아오게 해도 되는 거 아닌가 싶기도 하지만.. sel ponit는 애초에 양이 많지 않으므로 큰 문제가 되지 않을수도
-    Sel_PtQueue = cache.get("sel_points")
-    if Sel_PtQueue is None:
-        Sel_PtQueue = []
+    # just autosize => ignore/ 보통 'autosize': True 형태로 전달되지
+    if len(ctx.triggered) == 5:
+        print("system event")
 
-    real_relay_val = cache.get("relay_val")
-    #'' is occurred at the initialization
-    # if the event is selected Data // will be replced with
-    if ctx.triggered[0]['prop_id'].split('.')[-1] == 'selectedData' or ctx.triggered[0]['prop_id'].split('.')[-1] == '':
+        raise PreventUpdate
 
-        if all(elem == None for elem in arg_sel_values):
-            print("A")
-            # do nothing
+# this is the user triggered event
+    elif len(ctx.triggered) == 1:
+        print("ctx data {}".format(ctx.triggered))
+
+        if(ctx.triggered[0]['prop_id'] == '.' ) :
+            raise PreventUpdate
         else:
-            # Interface to add or remove selected points
-            # set difference of A(Callback input)-B(Cache) will identify newly added single point
-            # in case of removing selected point, we might have empty set for the above case
-            # if Intersection between A(Callback input) and B(Cache) is the same as (Cache ) then
-            # yes -> we keep the old log of selected points
-            # no -> if cache has more than A(Callback input) we return A
-            #deselect event -> [{'points': []}, None, None, None, None, None, None, None]
-            #deselect event 아주 예전에 선택한 것을 deselect 한다면.. 가장 최근에 기억하는 점 하나만 딸랑 보낸다.
-            #가장 최근에 택한걸 deselect하게 되면 [] 가 가버린다는 거지..
-            # 1. deselect event 를 구별하는 법
-            # 2. 그 담에는 한 점 씩만 지울 수 있다. 즉.. state 를 보고 값을 가공해야한다.
+            event_trig_index = int(ctx.triggered[0]['prop_id'].split(',')[0].split(':')[-1])
 
-            # click evet 를 state로 보내야 할 수 도?
+            idx = 0
 
 
-            #doesn't specify what point is deselected but just sending empty point.
-            #shift click the selected dots should be defined as reset?
+            #all([]) => True / what?
+            if all([True if 'shapes' in item else False for item in arg_relay_values[event_trig_index].keys()  ]):
 
-
-            selectedpoints = df.index
-            # 이걸 for문으로 돌리는게 문제인듯 / intersection..
-            sanityCheckCnt = 0
-            for selected_data in arg_sel_values:
-                #only callback from one graph where the event occurred have valid data/
-                # below if statement will filter out the access of unnecessary call back data from other graphs which has empty value
-                if selected_data and (selected_data['points']!=None):
-                    sanityCheckCnt = sanityCheckCnt + 1
-
-                    rawSelPtCallback = [p['customdata'] for p in selected_data['points']]
-
-                    selPtDiff = np.setdiff1d( rawSelPtCallback, Sel_PtQueue )
-
-            if sanityCheckCnt > 1 :
-                raise Exception('only single value from callback should contain the valid value :  {} of them has shown.. weird'.format(sanityCheckCnt))
-            else:
-            # SanityCheck is for number of valid data from callback : should be from single graph rather than multiple ones
-            # However, desection event will bypass for loop above so sanityCheckCnt will be 0
-
-            # selPtDiff is to discern between selection case and deselection case
-            # if lenth of selPtdiff is 0
-            # chances are it might be deseletion case
-            #
-                if len(selPtDiff) == 1:
-                    Sel_PtQueue.append(selPtDiff[-1])
-                # in case of empty after set difference, need to check intersection to double check there is any
-                elif len(selPtDiff) == 0:
-                    #rawSelPtCallback and ... other..
-                    Sel_PtQueue = rawSelPtCallback
-                    # # really hard to implement since raw value of selected point is going to be differnt from which graph the event evoked from
-                    # temp_inter = np.intersect1d(rawSelPtCallback, Sel_PtQueue)
-                    #
-                    #     # if the intersection value is not same as cache
-                    #     # 여러 그래프에서... 다른 selected event 가 나올 수 있으니.. 아래 if 문은 옳지 않은거지
-                    # if np.array_equal(temp_inter, Sel_PtQueue) == False:
-                    #     Sel_PtQueue = rawSelPtCallback
-                    #     print("")
-
-
-                else :
-                    print("unexpected scenario")
-
-        result_1st = [get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), Sel_PtQueue,
-                                 real_relay_val) for i in range(len(filename_list))]
-
-    # sanity check required ? theorotically only one graph will throw valid value and
-    # other values should be none
-    # relayoutData event is called in initialization
-    # Autosize 일 경우 how to process / {'autosize': True}
-
-    elif ctx.triggered[0]['prop_id'].split('.')[-1] == 'relayoutData':
-        real_relay_val = None
-
-        classifier = [('autosize' in relay_val.keys(), relay_val ) for relay_val in arg_relay_values if type(relay_val) == dict]
-
-        if len(classifier) > 1 :
-            print("init. nothing has to be done")
-            #this means zoom in
-
-        elif len(classifier) == 1 :
-            if 'xaxis.autorange' in classifier[0][-1]:
                 for fig_item in fig_val:
-                    fig_item['layout']['xaxis'] = {"autorange" : True}
-                    fig_item['layout']['yaxis'] = {"autorange" : True}
-            elif 'xaxis.range[0]' in classifier[0][-1]:
+
+                    if (fig_item['layout']['shapes'][0]['y0'] != 0) or (fig_item['layout']['shapes'][0]['y1'] != 1):
+                        fig_item['layout']['shapes'][0]['y0'] = 0
+                        fig_item['layout']['shapes'][0]['y1'] = 1
+
+                    if (fig_item['layout']['shapes'][1]['y0'] != 0) or (fig_item['layout']['shapes'][1]['y1'] != 1):
+                        fig_item['layout']['shapes'][1]['y0'] = 0
+                        fig_item['layout']['shapes'][1]['y1'] = 1
+
+                    # event triggered graph doesn't need to be updated
+                    # State(fig_val) when it comes as a feedback '2020-12-28 13:50:27.3622' is transferred instead of '2020-12-28T13:50:27.952380'
+
+
+                    # line1 processing / index 0
+                    print("fig date type {}".format( type(fig_val[event_trig_index]['layout']['shapes'][0]['x0']) ))
+
+                    fig_item['layout']['shapes'][0]['x0'] = find_closest_x_val(
+                        fig_val[event_trig_index]['layout']['shapes'][0]['x0'], df, "{} time".format(filename_list[idx]))
+                    fig_item['layout']['shapes'][0]['x1'] = fig_item['layout']['shapes'][0]['x0']
+                    # "{} time".format(filename_list[i])
+                    # line2 processing / index 1
+                    fig_item['layout']['shapes'][1]['x0'] = find_closest_x_val(
+                        fig_val[event_trig_index]['layout']['shapes'][1]['x0'], df, "{} time".format(filename_list[idx]))
+                    fig_item['layout']['shapes'][1]['x1'] = fig_item['layout']['shapes'][1]['x0']
+
+                    idx = idx + 1
+
+               ###################################################
+                #elif ctx.triggered[0]['prop_id'].split('.')[-1] == 'relayoutData':
+                #real_relay_val = None
+
+                #우린 위에서 event_trig_index 로 어떤 그래프가 이벤트를 trigger 하는지 알고 있다!
+
+                #arg_relay_values[event_trig_index]
+                #data structure : {'shapes[0].x0': '2020-12-28 13:50:27.4095', 'shapes[0].x1': '2020-12-28 13:50:27.4095', 'shapes[0].y0': 0.09354838709677415, 'shapes[0].y1': 1.0935483870967742}
+                # 현재는 shape으로 오는 것과...zoom으로 오는 이벤트를 구별해야지.. moveline 참고할것
+                #elif any(['True' for relay_item in relayoutData.keys() if 'xaxis' in relay_item]):
+
+            #[{'yaxis.range[0]': 641.9528503937007, 'yaxis.range[1]': 1486.4004173228345}, None, None, None, None]
+
+
+            elif any([True if 'xaxis.range' in item else False for item in arg_relay_values[event_trig_index].keys() ]):
+                print("zoom")
+
+                # if (event_trig_index != idx):
+                # classifier = [('autosize' in relay_val.keys(), relay_val) for relay_val in arg_relay_values if
+                #               type(relay_val) == dict]
+                #
+                # if len(classifier) > 1:
+                #     print("init. nothing has to be done")
+                #     # this means zoom in
+                #
+                # elif len(classifier) == 1:
+                #     if 'xaxis.autorange' in classifier[0][-1]:
+                #         for fig_item in fig_val:
+                #             fig_item['layout']['xaxis'] = {"autorange": True}
+                #             fig_item['layout']['yaxis'] = {"autorange": True}
+                #     elif 'xaxis.range[0]' in classifier[0][-1]:
+                #         for fig_item in fig_val:
+                #             fig_item['layout']['xaxis'] = {
+                #                 "range": [classifier[0][-1]['xaxis.range[0]'], classifier[0][-1]['xaxis.range[1]']]}
+
+                ###################################################
+                #zoom in out은 x axis 값만  sync해주면 됨
                 for fig_item in fig_val:
-                    fig_item['layout']['xaxis'] = {
-                        "range": [classifier[0][-1]['xaxis.range[0]'], classifier[0][-1]['xaxis.range[1]']]}
-            #this means max zoom out again
+                    fig_item['layout']['xaxis']['range'][0] = arg_relay_values[event_trig_index]['xaxis.range[0]']
+                    fig_item['layout']['xaxis']['range'][1] = arg_relay_values[event_trig_index]['xaxis.range[1]']
+                    fig_item['layout']['xaxis']['autorange'] = False
+            #[{'xaxis.autorange': True, 'yaxis.autorange': True}, None, None, None, None]
+            #zoomout event
 
-        result_1st = fig_val
+            # y축을 움직여줄 경우에는... 비율로 계산하는게 최고지..
+           # [{'yaxis.range[0]': 641.9528503937007, 'yaxis.range[1]': 1486.4004173228345}, None, None, None, None]
+            elif all([True if 'yaxis.range' in item else False for item in arg_relay_values[event_trig_index].keys()]):
+
+                #how much it moved from the previous? how can I calculate? use cache
+                Prev_fig_list_y = cache.get("prev_fig_list_y")
+
+                diff = arg_relay_values[event_trig_index]['yaxis.range[1]'] - Prev_fig_list_y[event_trig_index]
+                scope = arg_relay_values[event_trig_index]['yaxis.range[1]']-arg_relay_values[event_trig_index]['yaxis.range[0]']
+                ratio = diff / scope
+                idx = 0
+
+                for fig_item in fig_val:
+                    if idx != event_trig_index:
+                        fig_item['layout']['yaxis']['range'][0] = (1 + ratio) * fig_item['layout']['yaxis']['range'][0]
+                        fig_item['layout']['yaxis']['range'][1] = (1 + ratio) * fig_item['layout']['yaxis']['range'][1]
+                        fig_item['layout']['yaxis']['autorange'] = False
+                    idx = idx + 1
+
+            elif any([True if '.autorange' in item else False for item in arg_relay_values[event_trig_index].keys() ]):
+                for fig_item in fig_val:
+                    fig_item['layout']['xaxis']['autorange'] = True
+                    fig_item['layout']['yaxis']['autorange'] = True
+            else :
+                print("unexpected event")
 
 
-        # else문에서 나오는건 ndarray 형이므로 list 로 바꾼다
+            #Cache for the previous fig val to calculate the sync of vertical movement
+            Curr_fig_list_y = list()
 
-        #ndarray
+            for fig_item in fig_val:
+                Curr_fig_list_y.append(fig_item['layout']['yaxis']['range'][1])
 
-    # 여기서 부터 로직을... 생각해보자..
-    # 보통 점이 추가된다면 하나씩 추가된다. incrementally 점만 추가해주면 된다 저런 교집합은 필요없다.
-    # 만일 점이 모두 초기화 되는 경우가 있을 수 있다. [] 이렇게 오는 경우.. 그냥 초기화 하면 된다.
-
-
-    #since the data type coming out from else statements giving us numpy.ndarray
-    cache.set( "sel_points", Sel_PtQueue)
-    cache.set("relay_val", real_relay_val)
+            cache.set("prev_fig_list_y",Curr_fig_list_y)
 
 
-    cache.set("result_1st", result_1st)
-    result_2nd = list()
-    result_3rd = list()
-    for i in range(len(arg_sel_values)):
-            result_2nd.append(None)
-            result_3rd.append(None)
-    result = [result_1st, result_2nd, result_3rd]
-    return result
+            relay_buf_reset = list()
+            for i in range(len(fig_val)):
+                    relay_buf_reset.append(None)
+            result = [fig_val, relay_buf_reset ]
+            return result
 
+    else:
+        print("What is this event? {}", ctx.triggered)
+        raise PreventUpdate
 
 
 if __name__ == '__main__':

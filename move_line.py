@@ -156,6 +156,7 @@ def find_closest_x_val(value, df, colname):
             lowerneighbour_ind = df[df[colname] < value][colname].idxmax()
             flag = 1
             upperneighbour_ind = df[df[colname] > value][colname].idxmin()
+        #if the x coordinate of line is out of range
         except ValueError:
             #far left
             if flag == 0:
