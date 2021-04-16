@@ -57,7 +57,7 @@ app.layout = html.Div([
 
 
 #how to make our graph more aesthetic ?
-def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
+def get_figure(df, x_col, y_col, line1_x_whole_df_row, line2_x_whole_df_row ):
     #drag 해서 생성된 사각형 범주를 가리키는 건데... 이건 내가 만들려는 것과
     #관계가 없기 때문에... 삭제 가능
 
@@ -74,11 +74,11 @@ def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
     # attribute. see
     # https://medium.com/@plotlygraphs/notes-from-the-latest-plotly-js-release-b035a5b43e21
     # for an explanation
-    line1_x =  df.iloc[int(len(df[x_col]) / 3)][x_col]
-    line2_x =  df.iloc[int(len(df[x_col]) / 3 * 2)][x_col]
+    line1_x =  line1_x_whole_df_row[x_col]
+    line2_x =  line2_x_whole_df_row[x_col]
     fig = px.scatter(df, x=df[x_col], y=df[y_col], text=df.index)
 
-    fig.update_traces(selectedpoints=selectedpoints,
+    fig.update_traces(
                       customdata=df.index,
                       mode='markers+text', marker={ 'color': 'rgba(0, 116, 217, 0.7)', 'size': 20 }, unselected={'marker': { 'opacity': 0.3 }, 'textfont': { 'color': 'rgba(0, 0, 0, 0)' }})
     #margin={'l': 20, 'r': 0, 'b': 15, 't': 5},
@@ -123,10 +123,10 @@ def get_figure(df, x_col, y_col, selectedpoints, relay_value ):
     )
     return fig
 ####---------------------------------------------------------------------
+line1_x_whole_df_row = df.iloc[int(len(df) / 3)]
+line2_x_whole_df_row = df.iloc[int(len(df) / 3 * 2)]
 
-
-init_graph_data = [get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), [],
-                         None) for i in range(len(filename_list))]
+init_graph_data = [get_figure(df, "{} time".format(filename_list[i]), "{}".format(filename_list[i]), line1_x_whole_df_row, line2_x_whole_df_row) for i in range(len(filename_list))]
 
 
 
@@ -151,6 +151,20 @@ for i in range(Graph_count):
             # figure=graph_figures[i]
         )
     )
+
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+#Table pandas DF init /
+
+    #line1_x_whole_df_row 에서 time이 들어가지 않은 행(y 좌표 값 )의 값만 뽑아내면 되는 거니깐...
+    # => line1_x_whole_df_row[filename_list].values
+d = {
+    'Graph name' : filename_list,
+    'Line1 Value' : line1_x_whole_df_row[filename_list].values,
+    'Line2 Value':line2_x_whole_df_row[filename_list].values,
+    'Diff' : line2_x_whole_df_row[filename_list].values - line1_x_whole_df_row[filename_list].values
+}
+df_Table = pd.DataFrame(data=d)
+#$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 
 
 #what value should be conveyed as arguments?
@@ -321,7 +335,7 @@ def callback( arg_relay_values, fig_val):
                 Prev_fig_list_y = cache.get("prev_fig_list_y")
 
                 diff = arg_relay_values[event_trig_index]['yaxis.range[1]'] - Prev_fig_list_y[event_trig_index]
-                scope = arg_relay_values[event_trig_index]['yaxis.range[1]']-arg_relay_values[event_trig_index]['yaxis.range[0]']
+                scope = arg_relay_values[event_trig_index]['yaxis.range[1]'] - arg_relay_values[event_trig_index]['yaxis.range[0]']
                 ratio = diff / scope
                 idx = 0
 
@@ -348,6 +362,21 @@ def callback( arg_relay_values, fig_val):
 
             cache.set("prev_fig_list_y",Curr_fig_list_y)
 
+            #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+            # Table pandas DF update는?
+            # if user change the location of line1 to right side and line2 to left side ?
+            # should s/w automatically detect the difference and swap the datatable?
+            # However, it could be confusing as well, so it is better to put the name tag on line shape object.
+
+            # df.iloc[df[그래프 이름_time(어느것이든 상관없다. )] == line x coordi][filename_list] => 요게 Line1 Value에 들어가면 되겠지.
+            #  = df.iloc[df[filename_list[]
+            # df_Table['Line2 Value']
+            # index[0] should be followed at the end due to "array([[9.878110e+02, 9.772094e+02, 0.000000e+00, 1.600391e+00, 4.741730e-02]])"
+
+            df_Table['Line1 Value'] = df[df[filename_list[0] + " time"] == fig_val[0]['layout']['shapes'][0]['x0']][filename_list].values[0]
+            df_Table['Line2 Value'] = df[df[filename_list[0] + " time"] == fig_val[0]['layout']['shapes'][1]['x0']][filename_list].values[0]
+            df_Table['Diff'] = df_Table['Line2 Value'] - df_Table['Line1 Value']
+            print(df_Table)
 
             relay_buf_reset = list()
             for i in range(len(fig_val)):
