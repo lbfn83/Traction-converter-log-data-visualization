@@ -1,0 +1,380 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<log-group id="-1" name="tempe_dy_09001_1" created="2021-04-21T18:24:12.8934399-04:00">
+  <device-information device-id="10.10.1.101" device-name="10.10.1.101" manager-id="AC800-PEC">
+    <model>AC 800PEC (PP E100/E101)</model>
+    <device-version>0.0</device-version>
+    <application name="CC400 066" version="0.23087" />
+    <custom-properties>
+      <property id="PlatformRelease" name="Platform Release" category="General">
+        <read-only>False</read-only>
+        <required-type>System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</required-type>
+        <value type="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">5.3.1.2</value>
+        <description>PEC platform release version.</description>
+      </property>
+      <property id="SoapVersion" name="SOAP Version" category="General">
+        <read-only>False</read-only>
+        <required-type>System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</required-type>
+        <value type="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">2.2</value>
+        <description>Used SOAP protocol version.</description>
+      </property>
+      <property id="ControllerType" name="Controller Type" category="General">
+        <read-only>False</read-only>
+        <required-type>System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</required-type>
+        <value type="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">PP E100/E101</value>
+        <description>PEC Controller Type</description>
+      </property>
+    </custom-properties>
+    <extensions />
+  </device-information>
+  <group-properties>
+    <property id="sampling-interval" name="" category="General">
+      <read-only>False</read-only>
+      <value type="System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">20000</value>
+      <description />
+    </property>
+    <property id="refresh-interval" name="" category="General">
+      <read-only>False</read-only>
+      <value type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">2000</value>
+      <description />
+    </property>
+    <property id="min-sampling-interval" name="" category="General">
+      <read-only>False</read-only>
+      <value type="System.UInt32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">20000</value>
+      <description />
+    </property>
+    <property id="max-buffered-samples" name="" category="General">
+      <read-only>False</read-only>
+      <value type="System.Int32, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">1600</value>
+      <description />
+    </property>
+    <property id="recorder-name" name="" category="General">
+      <read-only>False</read-only>
+      <value type="System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089">TrendRec_C</value>
+      <description />
+    </property>
+  </group-properties>
+  <logs>
+    <log index="0" items="1600" enabled="True" color="-16744448" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="0-si_WMm_ENC1.log">
+      <data-point id="13501">
+        <common>
+          <name>si_WMm_ENC1</name>
+          <qualified-name>13501</qualified-name>
+          <source-id>M/S</source-id>
+          <group>130500</group>
+          <group-name>305.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <unit>rad/s</unit>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="1" items="1600" enabled="True" color="-16776961" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="1-si_WMm_ENC2.log">
+      <data-point id="13502">
+        <common>
+          <name>si_WMm_ENC2</name>
+          <qualified-name>13502</qualified-name>
+          <source-id>M/S</source-id>
+          <group>130500</group>
+          <group-name>305.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <unit>rad/s</unit>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="2" items="1600" enabled="True" color="-11861886" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="2-si_WMm_ENC3.log">
+      <data-point id="13503">
+        <common>
+          <name>si_WMm_ENC3</name>
+          <qualified-name>13503</qualified-name>
+          <source-id>M/S</source-id>
+          <group>130500</group>
+          <group-name>305.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <unit>rad/s</unit>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="3" items="1600" enabled="True" color="-65536" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="3-si_WMm_ENC4.log">
+      <data-point id="13504">
+        <common>
+          <name>si_WMm_ENC4</name>
+          <qualified-name>13504</qualified-name>
+          <source-id>M/S</source-id>
+          <group>130500</group>
+          <group-name>305.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <unit>rad/s</unit>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="4" items="1600" enabled="True" color="-12156236" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="4-si_MC1_WMCs.log">
+      <data-point id="10740">
+        <common>
+          <name>si_MC1_WMCs</name>
+          <qualified-name>10740</qualified-name>
+          <source-id>M/S</source-id>
+          <group>103100</group>
+          <group-name>31.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="5" items="1600" enabled="True" color="-2987746" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="5-si_MC2_WMCs.log">
+      <data-point id="10840">
+        <common>
+          <name>si_MC2_WMCs</name>
+          <qualified-name>10840</qualified-name>
+          <source-id>M/S</source-id>
+          <group>103200</group>
+          <group-name>32.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="6" items="1600" enabled="True" color="-60269" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="6-si_VSE_VVe_enc.log">
+      <data-point id="18303">
+        <common>
+          <name>si_VSE_VVe_enc</name>
+          <qualified-name>18303</qualified-name>
+          <source-id>M/S</source-id>
+          <group>104500</group>
+          <group-name>45.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="7" items="1600" enabled="True" color="-13726889" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="7-si_VSE_VVe_est.log">
+      <data-point id="18304">
+        <common>
+          <name>si_VSE_VVe_est</name>
+          <qualified-name>18304</qualified-name>
+          <source-id>M/S</source-id>
+          <group>104500</group>
+          <group-name>45.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="8" items="1600" enabled="True" color="-8388608" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="8-si_Traction_VVe.log">
+      <data-point id="18138">
+        <common>
+          <name>si_Traction_VVe</name>
+          <qualified-name>18138</qualified-name>
+          <source-id>M/S</source-id>
+          <group>109900</group>
+          <group-name>99.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="9" items="1600" enabled="True" color="-23296" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="9-si_VCU_bEnaWheelCalib.log">
+      <data-point id="18199">
+        <common>
+          <name>si_VCU_bEnaWheelCalib</name>
+          <qualified-name>18199</qualified-name>
+          <source-id>M/S</source-id>
+          <group>100100</group>
+          <group-name>1.0</group-name>
+          <data-type>Boolean</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>0</min-value>
+          <max-value>1</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="10" items="1600" enabled="True" color="-16741493" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="10-si_DWh1.log">
+      <data-point id="13521">
+        <common>
+          <name>si_DWh1</name>
+          <qualified-name>13521</qualified-name>
+          <source-id>M/S</source-id>
+          <group>130500</group>
+          <group-name>305.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="11" items="1600" enabled="True" color="-7077677" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="11-si_DWh2.log">
+      <data-point id="13522">
+        <common>
+          <name>si_DWh2</name>
+          <qualified-name>13522</qualified-name>
+          <source-id>M/S</source-id>
+          <group>130500</group>
+          <group-name>305.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+    <log index="12" items="1600" enabled="True" color="-16744448" first-timestamp="2021-04-21T18:23:45.1222674-04:00" last-timestamp="2021-04-21T18:24:17.1022480-04:00" file-name="12-pa_APP_RxPDO1W3_VVe.log">
+      <data-point id="8197">
+        <common>
+          <name>pa_APP_RxPDO1W3_VVe</name>
+          <qualified-name>8197</qualified-name>
+          <source-id>M/S</source-id>
+          <group>197000</group>
+          <group-name>970.0</group-name>
+          <data-type>Double</data-type>
+          <access>ReadOnly</access>
+          <default-value>0</default-value>
+          <min-value>-1.79769313486232E+308</min-value>
+          <max-value>1.79769313486232E+308</max-value>
+          <is-bit-field>False</is-bit-field>
+          <is-enum>False</is-enum>
+        </common>
+        <custom-properties />
+        <extensions />
+      </data-point>
+      <entry-properties />
+    </log>
+  </logs>
+  <virtual-groups>
+    <default-configuration scale-mode="Automatic" scaling-min="NaN" scaling-max="NaN" />
+    <groups>
+      <virtual-group index="0" enabled="True">
+        <configuration scale-mode="Automatic" scaling-min="NaN" scaling-max="NaN" />
+        <items>
+          <log-entry index="0" signalID="si_WMm_ENC1" />
+          <log-entry index="1" signalID="si_WMm_ENC2" />
+        </items>
+      </virtual-group>
+      <virtual-group index="1" enabled="True">
+        <configuration scale-mode="Automatic" scaling-min="NaN" scaling-max="NaN" />
+        <items>
+          <log-entry index="4" signalID="si_MC1_WMCs" />
+          <log-entry index="5" signalID="si_MC2_WMCs" />
+        </items>
+      </virtual-group>
+      <virtual-group index="2" enabled="True">
+        <configuration scale-mode="Automatic" scaling-min="NaN" scaling-max="NaN" />
+        <items>
+          <log-entry index="6" signalID="si_VSE_VVe_enc" />
+          <log-entry index="7" signalID="si_VSE_VVe_est" />
+          <log-entry index="8" signalID="si_Traction_VVe" />
+          <log-entry index="12" signalID="pa_APP_RxPDO1W3_VVe" />
+        </items>
+      </virtual-group>
+      <virtual-group index="3" enabled="True">
+        <configuration scale-mode="Automatic" scaling-min="NaN" scaling-max="NaN" />
+        <items>
+          <log-entry index="10" signalID="si_DWh1" />
+          <log-entry index="11" signalID="si_DWh2" />
+        </items>
+      </virtual-group>
+      <virtual-group index="4" enabled="True">
+        <configuration scale-mode="Automatic" scaling-min="NaN" scaling-max="NaN" />
+        <items>
+          <log-entry index="9" signalID="si_VCU_bEnaWheelCalib" />
+        </items>
+      </virtual-group>
+      <virtual-group index="5" enabled="True">
+        <configuration scale-mode="Automatic" scaling-min="NaN" scaling-max="NaN" />
+        <items />
+      </virtual-group>
+    </groups>
+  </virtual-groups>
+</log-group>

@@ -1,7 +1,6 @@
 import tkinter as tk
 from tkinter import filedialog
 import os
-import pandas as pd
 import datetime
 import pandas as pd
 #using Tkinter, pop up the window to choose the directory and as an output send out the list of path + file names should be returned
@@ -64,7 +63,7 @@ def Raw_Data_to_Pandas_DF(filepath):
                 column_name = file_item.split("\\")[-1]
                 df_indv.columns = ["{}".format(column_name), "{} time".format(column_name)]
 
-                df_indv['{} time'.format(column_name)]=df_indv['{} time'.format(column_name)].apply(convert_matlab_timestamp)
+                df_indv['{} time'.format(column_name)] = df_indv['{} time'.format(column_name)].apply(convert_matlab_timestamp)
 
                 # axis = 0 => stack dataframe vertically / axis = 1 => stack dataframe horizontally
                 df = pd.concat([df, df_indv], axis=1)
