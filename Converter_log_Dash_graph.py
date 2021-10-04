@@ -6,7 +6,7 @@ import pandas as pd
 from dash.dependencies import Input, Output, MATCH, ALL, State
 import plotly.express as px
 from flask_caching import Cache
-import _PandaFileHandling as PFH
+import FileUtil as FUH
 from dash.exceptions import PreventUpdate
 
 import sys
@@ -34,17 +34,9 @@ cache.init_app(app.server, config=CACHE_CONFIG)
 #Read the list of files and put the list into variable
 #and then using panda all of data aggregated in single data frame
 
-full_path = PFH.print_file_path_list()
+full_path, filename_list  = FUH.getFilePathList()
 
-df = PFH.Raw_Data_to_Pandas_DF(full_path)
-
-filename_list = list()
-
-# Organize the file name list from pandas dataframe ( don't need duplicate file name with redundant 'time' at the end )
-for column in df.columns:
-    if 'time' not in column:
-        filename_list.append(column)
-
+df = FUH.RawDatatoPandasDF(full_path)
 
 Graph_count = len(filename_list)
 
