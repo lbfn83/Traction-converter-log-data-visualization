@@ -36,7 +36,7 @@ Aggregate contents of multiple log files in a single panda DataFrame
 param => filePath : list of files selected
 return type : single dataframe
 '''
-def RawDatatoPandasDF(filePath):
+def RawDataAggregationToDF(filePath):
 
     df = pd.DataFrame()
     for fileItem in filePath:
