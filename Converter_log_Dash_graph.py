@@ -30,7 +30,7 @@ full_path, filename_list  = FileUtil.getFilePathList()
 df = FileUtil.RawDataAggregationToDF(full_path)
 
 Table_container = html.Div(className='table_container', children=[], style={'display': 'inline-block', 'width' : "70%" }) #'border': '3px solid black'
-Graph_container = html.Div(className='graph_container', id='graph-container', children=[],style={'display': 'inline-block', 'width' : '70%', 'vertical-align': 'top', })
+Graph_container = html.Div(className='graph_container', id='graph-container', children=[],style={'display': 'inline-block', 'width' : '90%', 'vertical-align': 'top', })
 
 app.layout = html.Div([
     Table_container,
@@ -73,7 +73,7 @@ def get_figure(df, x_col, y_col, line1xPos, line2xPos):
     # other parameters for update_layout
     # margin={'l': 20, 'r': 0, 'b': 15, 't': 5},
     # dragmode='select',, hovermode=False
-    fig.update_layout( clickmode='event+select', title= y_col.split('.')[0])
+    fig.update_layout( clickmode='event+select', title= y_col.split('.')[0], autosize = False, width = 1500 )
 
     # Configure two date range lines
     # Param : yref => paper
@@ -215,6 +215,16 @@ def callback(relayValueList, figureList):
     # but it is okay to ignore / the Callback input contains {'value': {'autosize': True}}}
     if len(ctx.triggered) == len(filename_list):
         print("system event")
+        # Cache for the previous figure values
+        # Below lines are being executed right after when plotly graphs are loaded first time
+        curYaxisRangeMax = list()
+        curYaxisRangeMin = list()
+        for figure in figureList:
+            curYaxisRangeMax.append(figure['layout']['yaxis']['range'][1])
+            curYaxisRangeMin.append(figure['layout']['yaxis']['range'][0])
+        print("Cache set")
+        cache.set("yaxisMax", curYaxisRangeMax)
+        cache.set("yaxisMin", curYaxisRangeMin)
         raise PreventUpdate
 
     # In case of user triggered events :
@@ -297,20 +307,20 @@ def callback(relayValueList, figureList):
 
                 prevYaxisRangeMax = cache.get("yaxisMax")
 
-                if(prevYaxisRangeMax != None):
-                    diffValChg = relayValueList[eventTrigIndex]['yaxis.range[1]'] - prevYaxisRangeMax[eventTrigIndex]
-                    scopeYaxis = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex]['yaxis.range[0]']
-                    ratio = diffValChg / scopeYaxis
-                    idx = 0
 
-                    for figure in figureList:
-                        if idx != eventTrigIndex:
-                            scope =  figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
-                            diff = scope * ratio
-                            figure['layout']['yaxis']['range'][0] = diff + figure['layout']['yaxis']['range'][0]
-                            figure['layout']['yaxis']['range'][1] = diff + figure['layout']['yaxis']['range'][1]
-                            figure['layout']['yaxis']['autorange'] = False
-                        idx = idx + 1
+                diffValChg = relayValueList[eventTrigIndex]['yaxis.range[1]'] - prevYaxisRangeMax[eventTrigIndex]
+                scopeYaxis = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex]['yaxis.range[0]']
+                ratio = diffValChg / scopeYaxis
+                idx = 0
+
+                for figure in figureList:
+                    if idx != eventTrigIndex:
+                        scope =  figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
+                        diff = scope * ratio
+                        figure['layout']['yaxis']['range'][1] = diff + figure['layout']['yaxis']['range'][1]
+                        figure['layout']['yaxis']['range'][0] = diff + figure['layout']['yaxis']['range'][0]
+                        figure['layout']['yaxis']['autorange'] = False
+                    idx = idx + 1
 
             #4. When any of plots has been zoomed in
             # e.g. [{'xaxis.range[0]': '2021-04-29 08:20:17.0416', 'xaxis.range[1]': '2021-04-29 08:20:25.5975', 'yaxis.range[0]': -721.5874761641479, 'yaxis.range[1]': 462.0560103587825}, None, None, None]
@@ -330,8 +340,8 @@ def callback(relayValueList, figureList):
                 idx = 0
                 for figure in figureList:
                     if idx != eventTrigIndex:
-                        figure['layout']['xaxis']['range'][0] = relayValueList[eventTrigIndex]['xaxis.range[0]']
                         figure['layout']['xaxis']['range'][1] = relayValueList[eventTrigIndex]['xaxis.range[1]']
+                        figure['layout']['xaxis']['range'][0] = relayValueList[eventTrigIndex]['xaxis.range[0]']
                         figure['layout']['xaxis']['autorange'] = False
 
                         scope = figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
@@ -351,12 +361,10 @@ def callback(relayValueList, figureList):
                     figure['layout']['xaxis']['autorange'] = True
                     figure['layout']['yaxis']['autorange'] = True
 
-            # 6. Autosize event occurs unpredictably. Let's skip
+            # 6. Autosize event occurs unpredictably. it shouldn't be generated since autosize event is suppressed in config
             elif any([True if 'autosize' in item else False for item in relayValueList[eventTrigIndex].keys()]):
                 print("autosize   : {}".format(relayValueList))
-                # for figure in figureList:
-                #     figure['layout']['xaxis']['autorange'] = True
-                #     figure['layout']['yaxis']['autorange'] = True
+
                 raise PreventUpdate
 
             else :
