@@ -210,13 +210,14 @@ Return(Output) : This function is feeding processed data to all of plots for syn
 def callback(relayValueList, figureList):
     ctx = callback_context
 
+
     # autosize request generated at some internally defined refresh rate,
     # but it is okay to ignore / the Callback input contains {'value': {'autosize': True}}}
     if len(ctx.triggered) == len(filename_list):
         print("system event")
         raise PreventUpdate
 
-    # In case of user triggered event :
+    # In case of user triggered events :
     elif len(ctx.triggered) == 1:
 
         if(ctx.triggered[0]['prop_id'] == '.' ) :
@@ -226,15 +227,18 @@ def callback(relayValueList, figureList):
             #Extract the index number of the plot that triggered the event
             eventTrigIndex = int(ctx.triggered[0]['prop_id'].split(',')[0].split(':')[-1])
             idx = 0
-            # 1. When Date range line is moved, only the relay event value generated from event triggered plot has 'shapes' as a key
-            #  which indicates either one of date range line's coordinates that just moved
 
-            # e.g. Event triggered in the first plot, the relaydata would be structured like the below
-            # [{'shapes[1].x0': '2021-04-29 08:20:39.2098', 'shapes[1].x1': '2021-04-29 08:20:39.2098', 'shapes[1].y0': 0, 'shapes[1].y1': 1}, {'autosize': True}, {'autosize': True}, {'autosize': True}]
             if relayValueList[eventTrigIndex] == None:
                 print("None type")
-            if all([True if 'shapes' in item else False for item in relayValueList[eventTrigIndex].keys()]):
-                print("Date range line has moved : {}".format(relayValueList[eventTrigIndex]))
+                raise PreventUpdate
+
+            # 1. When Date range line is moved, only the relay event value generated from event triggered plot has 'shapes' as a key
+            # which indicates either one of date range line's coordinates that just moved
+            # e.g. Event triggered in the first plot, the relaydata would be structured like the below
+            # [{'shapes[1].x0': '2021-04-29 08:20:39.2098', 'shapes[1].x1': '2021-04-29 08:20:39.2098', 'shapes[1].y0': 0, 'shapes[1].y1': 1}, {'autosize': True}, {'autosize': True}, {'autosize': True}]
+            # Wrong event is delivered
+            elif all([True if 'shapes' in item else False for item in relayValueList[eventTrigIndex].keys()]):
+                print("Date range line has moved : {}".format(relayValueList))
 
                 for figure in figureList:
 
@@ -247,12 +251,13 @@ def callback(relayValueList, figureList):
                         figure['layout']['shapes'][1]['y0'] = 0
                         figure['layout']['shapes'][1]['y1'] = 1
 
-                    # print("fig date type : {}".format(type(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'])))
+                    print("fig date type : {}".format(type(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'])))
 
                     # In terms of x coordinates of data range lines, find the closest data point and move lines to it
                     # Dash's inconsistent behavior :
                     # Difference in X axis timestamp value(figure) '2021-04-29T08:19:59.058991000' vs '2021-04-29 08:20:39.2098'
                     # X coordinates from date line that just moved doesn't have 'T' in the middle, but the other has T in it
+
 
                     figure['layout']['shapes'][0]['x0'] = find_closest_x_val(
                         figureList[eventTrigIndex]['layout']['shapes'][0]['x0'], df, "{} time".format(filename_list[idx]))
@@ -264,43 +269,36 @@ def callback(relayValueList, figureList):
 
                     idx = idx + 1
 
-                #arg_relay_values[event_trig_index]
-                #data structure : {'shapes[0].x0': '2020-12-28 13:50:27.4095', 'shapes[0].x1': '2020-12-28 13:50:27.4095', 'shapes[0].y0': 0.09354838709677415, 'shapes[0].y1': 1.0935483870967742}
+                # Update each column on Data Table
+                df_Table['Line1 Value'] = \
+                df[df[filename_list[0] + " time"] == figureList[0]['layout']['shapes'][0]['x0']][filename_list].values[0]
+                df_Table['Line2 Value'] = \
+                df[df[filename_list[0] + " time"] == figureList[0]['layout']['shapes'][1]['x0']][filename_list].values[0]
+                df_Table['Diff'] = df_Table['Line2 Value'] - df_Table['Line1 Value']
+                # print(df_Table)
 
-                #elif any(['True' for relay_item in relayoutData.keys() if 'xaxis' in relay_item]):
-            #[{'yaxis.range[0]': 641.9528503937007, 'yaxis.range[1]': 1486.4004173228345}, None, None, None, None]
-
-            # 2. When any of plots is either zoomed in or out, only the relay event value generated from event triggered plot has 'shapes' as a key
-    #x 축만 움직이거나
-
-            # e.g.
-            # {'xaxis.range[0]': '2021-04-29 08:19:51.575', 'xaxis.range[1]': '2021-04-29 08:20:30.3982', 'yaxis.range[0]': -202.5462810383475, 'yaxis.range[1]': 645.1285302706506}
+            # 2. When any of plots has shifted along the x axis
+            # e.g. [{'xaxis.range[0]': '2021-04-29 08:19:58.0455', 'xaxis.range[1]': '2021-04-29 08:21:22.3963'}, {'autosize': True}, {'autosize': True}, {'autosize': True}]
+            # [{'xaxis.range[0]': '2021-04-29 08:19:54.6154', 'xaxis.range[1]': '2021-04-29 08:21:18.9662'}, None, None, None]
             elif all([True if 'xaxis.range' in item else False for item in relayValueList[eventTrigIndex].keys()]):
+                print("Move the range of plot along X axis   : {}".format(relayValueList))
 
-                print("Move the range of plot along X axis   : {}".format(relayValueList[eventTrigIndex]))
-
-                #zoom in out은 x axis 값만  sync해주면 됨
                 for figure in figureList:
                     figure['layout']['xaxis']['range'][0] = relayValueList[eventTrigIndex]['xaxis.range[0]']
                     figure['layout']['xaxis']['range'][1] = relayValueList[eventTrigIndex]['xaxis.range[1]']
                     figure['layout']['xaxis']['autorange'] = False
-            #[{'xaxis.autorange': True, 'yaxis.autorange': True}, None, None, None, None]
-            #zoomout event
 
-            # y축을 드래그 했을 경우
-            # cache를 이용해서 비율로 해야만함
-            # y 축의 범위가 각 plot마다 다르기 때문이지
-
-
-           # [{'yaxis.range[0]': 641.9528503937007, 'yaxis.range[1]': 1486.4004173228345}, None, None, None, None]
+            # 2. When any of plots has shifted along the y axis
+            # As the range of yaxis is different from each plot, the ratio of movement compared to the range of Y axis should be calculated to get the correct amount of shift for other plots
+            # e.g.[{'yaxis.range[0]': 641.9528503937007, 'yaxis.range[1]': 1486.4004173228345}, None, None, None, None]
             elif all([True if 'yaxis.range' in item else False for item in relayValueList[eventTrigIndex].keys()]):
 
-                print("Move the range of plot along Y axis or Zoom in  : {}".format(relayValueList[eventTrigIndex]))
-                #how much it moved from the previous? how can I calculate? use cache
-                Prev_fig_list_y = cache.get("prev_fig_list_y")
+                print("Move the range of plot along Y axis or Zoom in  : {}".format(relayValueList))
 
-                if(Prev_fig_list_y != None):
-                    diffValChg = relayValueList[eventTrigIndex]['yaxis.range[1]'] - Prev_fig_list_y[eventTrigIndex]
+                prevYaxisRangeMax = cache.get("yaxisMax")
+
+                if(prevYaxisRangeMax != None):
+                    diffValChg = relayValueList[eventTrigIndex]['yaxis.range[1]'] - prevYaxisRangeMax[eventTrigIndex]
                     scopeYaxis = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex]['yaxis.range[0]']
                     ratio = diffValChg / scopeYaxis
                     idx = 0
@@ -313,15 +311,22 @@ def callback(relayValueList, figureList):
                             figure['layout']['yaxis']['range'][1] = diff + figure['layout']['yaxis']['range'][1]
                             figure['layout']['yaxis']['autorange'] = False
                         idx = idx + 1
-            #4. When zoomed in
-            elif all([True if '.range' in item else False for item in relayValueList[eventTrigIndex].keys()]):
-                print("zoom in : {}".format(relayValueList[eventTrigIndex]))
-                Prev_fig_list_y = cache.get("prev_fig_list_y")
 
-                diffValChg = relayValueList[eventTrigIndex]['yaxis.range[1]'] - Prev_fig_list_y[eventTrigIndex]
-                scopeYaxis = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex][
-                    'yaxis.range[0]']
-                ratio = diffValChg / scopeYaxis
+            #4. When any of plots has been zoomed in
+            # e.g. [{'xaxis.range[0]': '2021-04-29 08:20:17.0416', 'xaxis.range[1]': '2021-04-29 08:20:25.5975', 'yaxis.range[0]': -721.5874761641479, 'yaxis.range[1]': 462.0560103587825}, None, None, None]
+            elif all([True if '.range' in item else False for item in relayValueList[eventTrigIndex].keys()]):
+                print("zoom in : {}".format(relayValueList))
+                prevYaxisRangeMax = cache.get("yaxisMax")
+                prevYaxisRangeMin = cache.get("yaxisMin")
+
+                # As the range of yaxis is different from each plot, the ratio calculated from Max value and Min Value change
+                # should be used to get the correct zoom in value in terms of Y axis for other plots
+                diffValChgMax = relayValueList[eventTrigIndex]['yaxis.range[1]'] - prevYaxisRangeMax[eventTrigIndex]
+                diffValChgMin = relayValueList[eventTrigIndex]['yaxis.range[0]'] - prevYaxisRangeMin[eventTrigIndex]
+                scopeYaxis = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex]['yaxis.range[0]']
+                ratioMax = diffValChgMax / scopeYaxis
+                ratioMin = diffValChgMin / scopeYaxis
+
                 idx = 0
                 for figure in figureList:
                     if idx != eventTrigIndex:
@@ -329,54 +334,55 @@ def callback(relayValueList, figureList):
                         figure['layout']['xaxis']['range'][1] = relayValueList[eventTrigIndex]['xaxis.range[1]']
                         figure['layout']['xaxis']['autorange'] = False
 
-                        figure['layout']['yaxis']['range'][0] = (1 + ratio) * figure['layout']['yaxis']['range'][0]
-                        figure['layout']['yaxis']['range'][1] = (1 + ratio) * figure['layout']['yaxis']['range'][1]
+                        scope = figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
+                        diffMax = scope * ratioMax
+                        diffMin = scope * ratioMin
+
+                        figure['layout']['yaxis']['range'][1] = diffMax + figure['layout']['yaxis']['range'][1]
+                        figure['layout']['yaxis']['range'][0] = diffMin + figure['layout']['yaxis']['range'][0]
                         figure['layout']['yaxis']['autorange'] = False
                     idx = idx + 1
 
 
-            # zoom out 햇을 때
+            # 5. When zoomed out
             elif any([True if '.autorange' in item else False for item in relayValueList[eventTrigIndex].keys()]):
-                print("zoom out  : {}".format(relayValueList[eventTrigIndex]))
+                print("zoom out  : {}".format(relayValueList))
                 for figure in figureList:
                     figure['layout']['xaxis']['autorange'] = True
                     figure['layout']['yaxis']['autorange'] = True
+
+            # 6. Autosize event occurs unpredictably. Let's skip
+            elif any([True if 'autosize' in item else False for item in relayValueList[eventTrigIndex].keys()]):
+                print("autosize   : {}".format(relayValueList))
+                # for figure in figureList:
+                #     figure['layout']['xaxis']['autorange'] = True
+                #     figure['layout']['yaxis']['autorange'] = True
+                raise PreventUpdate
+
             else :
-                print("unexpected event")
+                print("unexpected event{}".format(relayValueList))
 
-
-            #Cache for the previous figures
-            Curr_fig_list_y = list()
-
+            # Cache for the previous figure values
+            curYaxisRangeMax = list()
+            curYaxisRangeMin = list()
             for figure in figureList:
-                Curr_fig_list_y.append(figure['layout']['yaxis']['range'][1])
+                curYaxisRangeMax.append(figure['layout']['yaxis']['range'][1])
+                curYaxisRangeMin.append(figure['layout']['yaxis']['range'][0])
             print("Cache set")
-            cache.set("prev_fig_list_y",Curr_fig_list_y)
+            cache.set("yaxisMax", curYaxisRangeMax)
+            cache.set("yaxisMin", curYaxisRangeMin)
 
-            #$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-            # Table pandas DF update는?
-            # if user change the location of line1 to right side and line2 to left side ?
-            # should s/w automatically detect the difference and swap the datatable?
-            # However, it could be confusing as well, so it is better to put the name tag on line shape object.
-
-            # df.iloc[df[그래프 이름_time(어느것이든 상관없다. )] == line x coordi][filename_list] => 요게 Line1 Value에 들어가면 되겠지.
-            #  = df.iloc[df[filename_list[]
-            # df_Table['Line2 Value']
-            # index[0] should be followed at the end due to "array([[9.878110e+02, 9.772094e+02, 0.000000e+00, 1.600391e+00, 4.741730e-02]])"
-
-            df_Table['Line1 Value'] = df[df[filename_list[0] + " time"] == figureList[0]['layout']['shapes'][0]['x0']][filename_list].values[0]
-            df_Table['Line2 Value'] = df[df[filename_list[0] + " time"] == figureList[0]['layout']['shapes'][1]['x0']][filename_list].values[0]
-            df_Table['Diff'] = df_Table['Line2 Value'] - df_Table['Line1 Value']
-            # print(df_Table)
-
+            # As relayoutData buffer holds the previous value persistently,
+            # Let's empty the buffer at the end of every callback
             relay_buf_reset = list()
+            print(len(figureList))
             for i in range(len(figureList)):
                     relay_buf_reset.append(None)
             result = [figureList, relay_buf_reset, df_Table.to_dict('records')]
             return result
 
     else:
-        print("Unknown event {}", ctx.triggered)
+        print("Ctx's unknown event {} : two or more triggers occured at the same time", ctx.triggered)
         raise PreventUpdate
 
 
