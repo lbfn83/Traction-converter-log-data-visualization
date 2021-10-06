@@ -59,7 +59,7 @@ def RawDataAggregationToDF(filePath):
 
 '''
 convert_matlab_timestamp : Convert Matlab's intrinsic timestamp ( generated from Traction Converter ) to Python's timestamp 
-param => rawTS : timestamp that is extracted from log files, which is written 0.1 microseconds / Refer to log files located in Sample_Data folder  
+param => rawTS : timestamp that is extracted from log files, which is written 0.1 microseconds / Refer to log files located in Sample_Data_Normal data load folder  
 return type : panda Timestamp
 '''
 def convertMatlabTimestamp(rawTS):

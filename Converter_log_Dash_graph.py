@@ -73,6 +73,8 @@ def get_figure(df, x_col, y_col, line1xPos, line2xPos):
     # other parameters for update_layout
     # margin={'l': 20, 'r': 0, 'b': 15, 't': 5},
     # dragmode='select',, hovermode=False
+
+    # autosize is disabled since it takes up a lot of memories
     fig.update_layout( clickmode='event+select', title= y_col.split('.')[0], autosize = False, width = 1500 )
 
     # Configure two date range lines
@@ -143,6 +145,10 @@ Table_container.children.append(
 )
 
 '''
+###findClosestXval####
+In case of x coordinates of date range lines not being aligned with any of actual data entry, 
+find the closest data entry and reposition date lines to it
+
 PARAM :
     xValDateline => Date line's x coordinate ( string of timestamp )
     df => Dataframe
@@ -150,11 +156,6 @@ PARAM :
     
 return type : the timestamp of closest data point to date line's x coordinate
 '''
-
-# what value should be conveyed as arguments?
-# value should be  "shapes[0].x0": 3.451221409677921,
-# colname should be ? x1 or x2 it doesn't matter since both of graphs have same x values
-
 def findClosestXval(xValDateline, df, colname):
     xTimestamp = pd.Timestamp(xValDateline)
     exactmatch = df[df[colname] == xTimestamp]
@@ -288,7 +289,7 @@ def callback(relayValueList, figureList):
                         figure['layout']['shapes'][1]['y0'] = 0
                         figure['layout']['shapes'][1]['y1'] = 1
 
-                    print("fig date type : {}".format(type(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'])))
+                    # print("fig date type : {}".format(type(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'])))
 
                     figure['layout']['shapes'][0]['x0'] = dateline0Xval
                     figure['layout']['shapes'][0]['x1'] = figure['layout']['shapes'][0]['x0']
