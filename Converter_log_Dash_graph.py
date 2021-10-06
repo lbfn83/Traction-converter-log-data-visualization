@@ -143,6 +143,11 @@ Table_container.children.append(
 )
 
 '''
+PARAM :
+    xValDateline => Date line's x coordinate ( string of timestamp )
+    df => Dataframe
+    colname => 
+    
 return type : the timestamp of closest data point to date line's x coordinate
 '''
 
@@ -258,6 +263,20 @@ def callback(relayValueList, figureList):
             elif all([True if 'shapes' in item else False for item in relayValueList[eventTrigIndex].keys()]):
                 print("Date range line has moved : {}".format(relayValueList))
 
+                # In terms of x coordinates of data range lines, find the closest data point and reposition date lines to it
+                # As all the plots share same stream of timestamp values (x axis ), it doesn't matter which idx(index) is chosen
+                # for findClosestXval function
+
+                # Dash's inconsistent behavior :
+                # Difference in X axis timestamp value(figure) '2021-04-29T08:19:59.058991000' vs '2021-04-29 08:20:39.2098'
+                # X coordinates from date line that just moved doesn't have 'T' in the middle, but the other has T in it
+
+                dateline0Xval = \
+                findClosestXval(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'], df, "{} time".format(filename_list[idx]))
+
+                dateline1Xval = \
+                findClosestXval(figureList[eventTrigIndex]['layout']['shapes'][1]['x0'], df, "{} time".format(filename_list[idx]))
+
                 for figure in figureList:
 
                     # In terms of y coordinates of data range lines, when either one of them is displaced, put it back inside the plot
@@ -271,18 +290,10 @@ def callback(relayValueList, figureList):
 
                     print("fig date type : {}".format(type(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'])))
 
-                    # In terms of x coordinates of data range lines, find the closest data point and move lines to it
-                    # Dash's inconsistent behavior :
-                    # Difference in X axis timestamp value(figure) '2021-04-29T08:19:59.058991000' vs '2021-04-29 08:20:39.2098'
-                    # X coordinates from date line that just moved doesn't have 'T' in the middle, but the other has T in it
-
-
-                    figure['layout']['shapes'][0]['x0'] = findClosestXval(
-                        figureList[eventTrigIndex]['layout']['shapes'][0]['x0'], df, "{} time".format(filename_list[idx]))
+                    figure['layout']['shapes'][0]['x0'] = dateline0Xval
                     figure['layout']['shapes'][0]['x1'] = figure['layout']['shapes'][0]['x0']
 
-                    figure['layout']['shapes'][1]['x0'] = findClosestXval(
-                        figureList[eventTrigIndex]['layout']['shapes'][1]['x0'], df, "{} time".format(filename_list[idx]))
+                    figure['layout']['shapes'][1]['x0'] = dateline1Xval
                     figure['layout']['shapes'][1]['x1'] = figure['layout']['shapes'][1]['x0']
 
                     idx = idx + 1
@@ -319,7 +330,6 @@ def callback(relayValueList, figureList):
                 diffValChg = relayValueList[eventTrigIndex]['yaxis.range[1]'] - prevYaxisRangeMax[eventTrigIndex]
                 scopeYaxis = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex]['yaxis.range[0]']
                 ratio = diffValChg / scopeYaxis
-                idx = 0
 
                 for figure in figureList:
                     if idx != eventTrigIndex:
@@ -344,7 +354,7 @@ def callback(relayValueList, figureList):
                 scopeYaxis = prevYaxisRangeMax[eventTrigIndex] - prevYaxisRangeMin[eventTrigIndex]
                 ratioMax = diffValChgMax / scopeYaxis
                 ratioMin = diffValChgMin / scopeYaxis
-                idx = 0
+
                 for figure in figureList:
                     if idx != eventTrigIndex:
                         figure['layout']['xaxis']['range'][1] = relayValueList[eventTrigIndex]['xaxis.range[1]']
