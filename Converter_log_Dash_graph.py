@@ -143,47 +143,56 @@ Table_container.children.append(
 )
 
 '''
+return type : the timestamp of closest data point to date line's x coordinate
 '''
 
 # what value should be conveyed as arguments?
 # value should be  "shapes[0].x0": 3.451221409677921,
 # colname should be ? x1 or x2 it doesn't matter since both of graphs have same x values
 
-def find_closest_x_val(value, df, colname):
-    pd_timeval = pd.Timestamp(value)
-    exactmatch = df[df[colname] == pd_timeval]
+def findClosestXval(xValDateline, df, colname):
+    xTimestamp = pd.Timestamp(xValDateline)
+    exactmatch = df[df[colname] == xTimestamp]
 
-    # return value should be changed
     if not exactmatch.empty:
-        # 여기 처리가 자꾸 다른 type의 리턴값이 나오도록 만드느느 듯
-        return str(exactmatch[colname].values[0])
+
+        # if there is a data entry in dataframe that has exactly same value as xTimestamp
+        # Date line's position is right on top of the data entry
+        # return type : numpy.datetime64('2021-04-29T08:19:57.028812000')
+        return pd.Timestamp(exactmatch[colname].values[0])
     else:
+
         try:
             flag = 0
-            lowerneighbour_ind = df[df[colname] < pd_timeval][colname].idxmax()
+            # Find the greatest lower bound
+            lowerBoundIdx = df[df[colname] < xTimestamp][colname].idxmax()
             flag = 1
-            upperneighbour_ind = df[df[colname] > pd_timeval][colname].idxmin()
+            # Find the least upper bound
+            upperBoundIdx = df[df[colname] > xTimestamp][colname].idxmin()
 
         except ValueError:
-            # the line go beyond the left end of graph, make it forcefully move back to the first element at the far left
+            # If dateline has been placed beyond the left edge of the plot, return the data entry has earliest timestamp
             if flag == 0:
+                # return type : Timestamp
                 return df.iloc[0][colname]
             # the line go beyond the right end of graph, ... forcefully move back to the far right point of graph
             elif flag == 1:
                 return df.iloc[df.index.stop - 1][colname]
 
             else:
-                print("Unexpected ValueError/ the value of flag : { }".format(flag))
+                print("Unexpected exception handling case(ValueError) : the value of flag : { }".format(flag))
         except:
-            print("Unexpected error!:", sys.exc_info()[0])
+            print("Unexpected exception:", sys.exc_info()[0])
 
-    print("wow {} {} lower index {} {}".format(value, type(value), lowerneighbour_ind,
-                                               df.iloc[upperneighbour_ind][colname]))
-    if (abs(df.iloc[lowerneighbour_ind][colname] - pd_timeval) > abs(
-            df.iloc[upperneighbour_ind][colname] - pd_timeval)):
-        return df.iloc[upperneighbour_ind][colname]
+    # print(" least upperbound : {} {} / greatest lowerbound {} {}".format(upperBoundIdx,  df.iloc[upperBoundIdx][colname], lowerBoundIdx,
+    #                                            df.iloc[lowerBoundIdx][colname]))
+
+    # Find the closest to the position of Date line between lowerbound and upperbound
+    if (abs(df.iloc[lowerBoundIdx][colname] - xTimestamp) > abs(
+            df.iloc[upperBoundIdx][colname] - xTimestamp)):
+        return df.iloc[upperBoundIdx][colname]
     else:
-        return df.iloc[lowerneighbour_ind][colname]
+        return df.iloc[lowerBoundIdx][colname]
 
 # Another possibility by using MATCH ?
 # The selected data event info in the past remains persistent, so the buffer for selecteddata
@@ -211,20 +220,9 @@ def callback(relayValueList, figureList):
     ctx = callback_context
 
 
-    # autosize request generated at some internally defined refresh rate,
-    # but it is okay to ignore / the Callback input contains {'value': {'autosize': True}}}
+    # autosize has been disabled so below event is not supposed to occur
     if len(ctx.triggered) == len(filename_list):
         print("system event")
-        # Cache for the previous figure values
-        # Below lines are being executed right after when plotly graphs are loaded first time
-        curYaxisRangeMax = list()
-        curYaxisRangeMin = list()
-        for figure in figureList:
-            curYaxisRangeMax.append(figure['layout']['yaxis']['range'][1])
-            curYaxisRangeMin.append(figure['layout']['yaxis']['range'][0])
-        print("Cache set")
-        cache.set("yaxisMax", curYaxisRangeMax)
-        cache.set("yaxisMin", curYaxisRangeMin)
         raise PreventUpdate
 
     # In case of user triggered events :
@@ -232,6 +230,16 @@ def callback(relayValueList, figureList):
 
         if(ctx.triggered[0]['prop_id'] == '.' ) :
             print("system event2")
+            # Cache for the previous figure values
+            # Below codes is being executed at the init state when plots are first loaded on display
+            curYaxisRangeMax = list()
+            curYaxisRangeMin = list()
+            for figure in figureList:
+                curYaxisRangeMax.append(figure['layout']['yaxis']['range'][1])
+                curYaxisRangeMin.append(figure['layout']['yaxis']['range'][0])
+            print("Cache set")
+            cache.set("yaxisMax", curYaxisRangeMax)
+            cache.set("yaxisMin", curYaxisRangeMin)
             raise PreventUpdate
         else:
             #Extract the index number of the plot that triggered the event
@@ -269,11 +277,11 @@ def callback(relayValueList, figureList):
                     # X coordinates from date line that just moved doesn't have 'T' in the middle, but the other has T in it
 
 
-                    figure['layout']['shapes'][0]['x0'] = find_closest_x_val(
+                    figure['layout']['shapes'][0]['x0'] = findClosestXval(
                         figureList[eventTrigIndex]['layout']['shapes'][0]['x0'], df, "{} time".format(filename_list[idx]))
                     figure['layout']['shapes'][0]['x1'] = figure['layout']['shapes'][0]['x0']
 
-                    figure['layout']['shapes'][1]['x0'] = find_closest_x_val(
+                    figure['layout']['shapes'][1]['x0'] = findClosestXval(
                         figureList[eventTrigIndex]['layout']['shapes'][1]['x0'], df, "{} time".format(filename_list[idx]))
                     figure['layout']['shapes'][1]['x1'] = figure['layout']['shapes'][1]['x0']
 
@@ -303,7 +311,7 @@ def callback(relayValueList, figureList):
             # e.g.[{'yaxis.range[0]': 641.9528503937007, 'yaxis.range[1]': 1486.4004173228345}, None, None, None, None]
             elif all([True if 'yaxis.range' in item else False for item in relayValueList[eventTrigIndex].keys()]):
 
-                print("Move the range of plot along Y axis or Zoom in  : {}".format(relayValueList))
+                print("Move the range of plot along Y axis  : {}".format(relayValueList))
 
                 prevYaxisRangeMax = cache.get("yaxisMax")
 
@@ -315,7 +323,7 @@ def callback(relayValueList, figureList):
 
                 for figure in figureList:
                     if idx != eventTrigIndex:
-                        scope =  figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
+                        scope = figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
                         diff = scope * ratio
                         figure['layout']['yaxis']['range'][1] = diff + figure['layout']['yaxis']['range'][1]
                         figure['layout']['yaxis']['range'][0] = diff + figure['layout']['yaxis']['range'][0]
@@ -333,10 +341,9 @@ def callback(relayValueList, figureList):
                 # should be used to get the correct zoom in value in terms of Y axis for other plots
                 diffValChgMax = relayValueList[eventTrigIndex]['yaxis.range[1]'] - prevYaxisRangeMax[eventTrigIndex]
                 diffValChgMin = relayValueList[eventTrigIndex]['yaxis.range[0]'] - prevYaxisRangeMin[eventTrigIndex]
-                scopeYaxis = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex]['yaxis.range[0]']
+                scopeYaxis = prevYaxisRangeMax[eventTrigIndex] - prevYaxisRangeMin[eventTrigIndex]
                 ratioMax = diffValChgMax / scopeYaxis
                 ratioMin = diffValChgMin / scopeYaxis
-
                 idx = 0
                 for figure in figureList:
                     if idx != eventTrigIndex:
@@ -345,6 +352,7 @@ def callback(relayValueList, figureList):
                         figure['layout']['xaxis']['autorange'] = False
 
                         scope = figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
+
                         diffMax = scope * ratioMax
                         diffMin = scope * ratioMin
 
