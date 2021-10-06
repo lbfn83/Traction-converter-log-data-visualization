@@ -10,13 +10,13 @@
 
 ## Feature
 
-1. Conversion from Matlab timestamp to Python timestamp
+1. Conversion from raw timestamp data genertated in Matlab application to python's timestamp type
 
-2. Locate the closest data point in the graph 
+2. Find a scattered point that is closest to the location of a reference line and relocate the line right on the point 
 
-3. Synchronization of selected time points across all graphs 
+3. Synchronization of x and y axis movement, zoom, and reference line's location between all of plots
 
 4. Dynamic number of graphs rendered based on the number of singal log data
 
-5. panda data process
+5. Panda DataFrame handling
 
