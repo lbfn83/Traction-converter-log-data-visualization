@@ -39,20 +39,20 @@ app.layout = html.Div([
     style={'display': 'inline-block'}
 )
 
-# The initial position for two date range lines for all columns of data
+# The initial position for two reference lines for all columns of data
 line1xPos = df.iloc[int(len(df) / 3)]
 line2xPos = df.iloc[int(len(df) / 3 * 2)]
 
 '''
 Create scatter plot with dataframe values
-also create two date range lines placed on each graph
+also create two reference lines placed on each graph
 
 PARAM :
     df => dataframe generated from log files
     x_col =>  name of column ending with 'time' that has the corresponding time stamps to the x_col values
     y_col =>  name of column that has time series values for each signal
-    line1xPos =>  single row of data set that was generated at the same time where first date range line's position is set
-    line2xPos =>   single row of data set that was generated at the same time where second date range line's position is set
+    line1xPos =>  single row of data set that was generated at the same time where first reference line's position is set
+    line2xPos =>   single row of data set that was generated at the same time where second reference line's position is set
     
 return type : plotly scatter plot
 '''
@@ -77,7 +77,7 @@ def get_figure(df, x_col, y_col, line1xPos, line2xPos):
     # autosize is disabled since it takes up a lot of memories
     fig.update_layout( clickmode='event+select', title= y_col.split('.')[0], autosize = False, width = 1500 )
 
-    # Configure two date range lines
+    # Configure two reference lines
     # Param : yref => paper
     # the `y` position refers to the distance from the left of the plotting area in
     # normalized coordinates where 0 (1) corresponds to the left (right).
@@ -146,24 +146,24 @@ Table_container.children.append(
 
 '''
 ###findClosestXval####
-In case of x coordinates of date range lines not being aligned with any of actual data entry, 
-find the closest data entry and reposition date lines to it
+In case of x coordinates of reference lines not being aligned with any of actual data entry, 
+find the closest data entry and reposition reference lines to it
 
 PARAM :
-    xValDateline => Date line's x coordinate ( string of timestamp )
+    xValRefline => reference line's x coordinate ( string of timestamp )
     df => Dataframe
     colname => 
     
-return type : the timestamp of closest data point to date line's x coordinate
+return type : the timestamp of closest data point to reference line's x coordinate
 '''
-def findClosestXval(xValDateline, df, colname):
-    xTimestamp = pd.Timestamp(xValDateline)
+def findClosestXval(xValRefline, df, colname):
+    xTimestamp = pd.Timestamp(xValRefline)
     exactmatch = df[df[colname] == xTimestamp]
 
     if not exactmatch.empty:
 
         # if there is a data entry in dataframe that has exactly same value as xTimestamp
-        # Date line's position is right on top of the data entry
+        # reference line's position is right on top of the data entry
         # return type : numpy.datetime64('2021-04-29T08:19:57.028812000')
         return pd.Timestamp(exactmatch[colname].values[0])
     else:
@@ -177,7 +177,7 @@ def findClosestXval(xValDateline, df, colname):
             upperBoundIdx = df[df[colname] > xTimestamp][colname].idxmin()
 
         except ValueError:
-            # If dateline has been placed beyond the left edge of the plot, return the data entry has earliest timestamp
+            # If reference line has been placed beyond the left edge of the plot, return the data entry has earliest timestamp
             if flag == 0:
                 # return type : Timestamp
                 return df.iloc[0][colname]
@@ -193,7 +193,7 @@ def findClosestXval(xValDateline, df, colname):
     # print(" least upperbound : {} {} / greatest lowerbound {} {}".format(upperBoundIdx,  df.iloc[upperBoundIdx][colname], lowerBoundIdx,
     #                                            df.iloc[lowerBoundIdx][colname]))
 
-    # Find the closest to the position of Date line between lowerbound and upperbound
+    # Find the closest to the position of reference line between lowerbound and upperbound
     if (abs(df.iloc[lowerBoundIdx][colname] - xTimestamp) > abs(
             df.iloc[upperBoundIdx][colname] - xTimestamp)):
         return df.iloc[upperBoundIdx][colname]
@@ -208,8 +208,8 @@ Callback Function
 
 Triggering event : relayoutData / when any of data range lines is moved
 Return(Output) : This function is feeding processed data to all of plots for synchronization of the zoom area and 
-                the placement of date range lines across all plots. Also data table, that displays the difference between 
-                two date range lines, is updated accordingly. 
+                the placement of reference lines across all plots. Also data table, that displays the difference between 
+                two reference range lines, is updated accordingly. 
 '''
 @app.callback(
     [
@@ -256,26 +256,25 @@ def callback(relayValueList, figureList):
                 print("None type")
                 raise PreventUpdate
 
-            # 1. When Date range line is moved, only the relay event value generated from event triggered plot has 'shapes' as a key
-            # which indicates either one of date range line's coordinates that just moved
+            # 1. When a reference line is moved, the relay event triggered from plot, that has the moved line, contains 'shapes' as a key
+            # and it has x coordinate value of said line.
             # e.g. Event triggered in the first plot, the relaydata would be structured like the below
             # [{'shapes[1].x0': '2021-04-29 08:20:39.2098', 'shapes[1].x1': '2021-04-29 08:20:39.2098', 'shapes[1].y0': 0, 'shapes[1].y1': 1}, {'autosize': True}, {'autosize': True}, {'autosize': True}]
-            # Wrong event is delivered
             elif all([True if 'shapes' in item else False for item in relayValueList[eventTrigIndex].keys()]):
-                print("Date range line has moved : {}".format(relayValueList))
+                print("reference line has moved : {}".format(relayValueList))
 
-                # In terms of x coordinates of data range lines, find the closest data point and reposition date lines to it
+                # In terms of x coordinates of data range lines, find the closest scattered data point and reposition reference lines to it
                 # As all the plots share same stream of timestamp values (x axis ), it doesn't matter which idx(index) is chosen
-                # for findClosestXval function
+                # for an argument of findClosestXval function
 
                 # Dash's inconsistent behavior :
                 # Difference in X axis timestamp value(figure) '2021-04-29T08:19:59.058991000' vs '2021-04-29 08:20:39.2098'
-                # X coordinates from date line that just moved doesn't have 'T' in the middle, but the other has T in it
+                # X coordinates from reference line that just moved doesn't have 'T' in the middle, but the other has T in it
 
-                dateline0Xval = \
+                refline0Xval = \
                 findClosestXval(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'], df, "{} time".format(filename_list[idx]))
 
-                dateline1Xval = \
+                refline1Xval = \
                 findClosestXval(figureList[eventTrigIndex]['layout']['shapes'][1]['x0'], df, "{} time".format(filename_list[idx]))
 
                 for figure in figureList:
@@ -291,10 +290,10 @@ def callback(relayValueList, figureList):
 
                     # print("fig date type : {}".format(type(figureList[eventTrigIndex]['layout']['shapes'][0]['x0'])))
 
-                    figure['layout']['shapes'][0]['x0'] = dateline0Xval
+                    figure['layout']['shapes'][0]['x0'] = refline0Xval
                     figure['layout']['shapes'][0]['x1'] = figure['layout']['shapes'][0]['x0']
 
-                    figure['layout']['shapes'][1]['x0'] = dateline1Xval
+                    figure['layout']['shapes'][1]['x0'] = refline1Xval
                     figure['layout']['shapes'][1]['x1'] = figure['layout']['shapes'][1]['x0']
 
                     idx = idx + 1
