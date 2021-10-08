@@ -349,25 +349,33 @@ def callback(relayValueList, figureList):
 
                 # As the range of yaxis is different from each plot, the ratio calculated from Max value and Min Value change
                 # should be used to get the correct zoom in value in terms of Y axis for other plots
-                diffValChgMax = relayValueList[eventTrigIndex]['yaxis.range[1]'] - prevYaxisRangeMax[eventTrigIndex]
-                diffValChgMin = relayValueList[eventTrigIndex]['yaxis.range[0]'] - prevYaxisRangeMin[eventTrigIndex]
-                scopeYaxis = prevYaxisRangeMax[eventTrigIndex] - prevYaxisRangeMin[eventTrigIndex]
-                ratioMax = diffValChgMax / scopeYaxis
-                ratioMin = diffValChgMin / scopeYaxis
+                currAbsScope = relayValueList[eventTrigIndex]['yaxis.range[1]'] - relayValueList[eventTrigIndex]['yaxis.range[0]']
+                prevAbsScope = prevYaxisRangeMax[eventTrigIndex] - prevYaxisRangeMin[eventTrigIndex]
+                scopeRatio = currAbsScope / prevAbsScope
+
+                #data point, positioned right in the midlle between the ranges of plot after zoom in, should be repositoned at the center of the plot
+                timeStamp1 = pd.Timestamp(relayValueList[eventTrigIndex]['xaxis.range[0]'])
+                timeStamp2 = pd.Timestamp(relayValueList[eventTrigIndex]['xaxis.range[1]'])
+                targetTimestamp = timeStamp1 + (timeStamp2 - timeStamp1)/2.0
 
                 for figure in figureList:
                     if idx != eventTrigIndex:
-                        figure['layout']['xaxis']['range'][1] = relayValueList[eventTrigIndex]['xaxis.range[1]']
+
                         figure['layout']['xaxis']['range'][0] = relayValueList[eventTrigIndex]['xaxis.range[0]']
+                        figure['layout']['xaxis']['range'][1] = relayValueList[eventTrigIndex]['xaxis.range[1]']
                         figure['layout']['xaxis']['autorange'] = False
 
-                        scope = figure['layout']['yaxis']['range'][1] - figure['layout']['yaxis']['range'][0]
+                        # Get y coordinate of data point the the middle and set the range of plot based on it
+                        # to put the data point right in the middle
+                        prevScope = float(figure['layout']['yaxis']['range'][1]) - float(figure['layout']['yaxis']['range'][0])
+                        currScope = prevScope * scopeRatio
 
-                        diffMax = scope * ratioMax
-                        diffMin = scope * ratioMin
+                        datapointIdx = \
+                        df[df["{} time".format(filename_list[idx])] < targetTimestamp][filename_list[idx]].index[-1]
 
-                        figure['layout']['yaxis']['range'][1] = diffMax + figure['layout']['yaxis']['range'][1]
-                        figure['layout']['yaxis']['range'][0] = diffMin + figure['layout']['yaxis']['range'][0]
+                        targetYVal= df.iloc[datapointIdx][filename_list[idx]]
+                        figure['layout']['yaxis']['range'][1] = targetYVal + (currScope / 2.0)
+                        figure['layout']['yaxis']['range'][0] = targetYVal - (currScope / 2.0)
                         figure['layout']['yaxis']['autorange'] = False
                     idx = idx + 1
 
