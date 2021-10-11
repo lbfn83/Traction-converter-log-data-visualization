@@ -10,13 +10,13 @@
 
 ## Feature
 
-- Conversion from raw timestamp data generatated in Matlab application to python's timestamp type
+-  Conversion from raw timestamp generatated in Matlab application to python's timestamp type
 
--  Find a scattered point that is closest to the location of a reference line and relocate the line right on the point 
+-  Find a scattered point that is closest to the location of a reference line just moved and relocate the line right on the point 
 
--  Synchronization of x and yaxis movement, zoom, and reference line's location between all of plots
+-  Synchronization of x and y axis movement, zoom in/out, and also the location of reference lines between each plot
 
--  Dynamic number of graphs rendered based on the number of singal log data
+-  Dynamic number of graphs rendered based on the number of signal log data
 
 -  Panda DataFrame handling
 
