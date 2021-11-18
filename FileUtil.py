@@ -73,9 +73,11 @@ def convertMatlabTimestamp(rawTS):
     return pd.Timestamp(time_result)
 
 #  Debug code
-# if __name__ == '__main__':
+if __name__ == '__main__':
+    a = convertMatlabTimestamp(637430648368403814)
 #     full_path, fnameList = getFilePathList()
-#     print(full_path)
+#     print(full_path)        
+      print(a)
 #     print('===========')
 #     print(fnameList)
 #     pd_df = RawDataAggregationToDF(full_path)
